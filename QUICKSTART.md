@@ -37,11 +37,24 @@ This will:
 - Save translated files to ES/ folder with same filenames
 - Show progress and summary
 - Automatically handle rate limits with smart retry logic
+- **Error if output files already exist** (safety feature)
 
 **Directory with subdirectories:**
 ```bash
 python cli.py translate-dir EN/ ES/ --target-lang es --recursive
 ```
+
+**Resume interrupted batch (skip existing):**
+```bash
+python cli.py translate-dir EN/ ES/ --target-lang es --skip
+```
+Skips files that already exist in output directory. Useful for resuming interrupted batches.
+
+**Re-translate everything (override existing):**
+```bash
+python cli.py translate-dir EN/ ES/ --target-lang es --override
+```
+Overwrites existing files. Use this to re-translate with updated settings.
 
 ### Step-by-Step Workflow
 If you want to inspect or manually edit the extracted text:

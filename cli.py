@@ -122,7 +122,19 @@ def translate_pptx(input, output, target_lang, source_lang):
 @click.option(
     "--recursive/--no-recursive", default=False, help="Process subdirectories recursively"
 )
-def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive):
+@click.option(
+    "--skip",
+    "skip_existing",
+    is_flag=True,
+    help="Skip files that already exist in output directory",
+)
+@click.option(
+    "--override",
+    "override_existing",
+    is_flag=True,
+    help="Override/overwrite existing files in output directory",
+)
+def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, skip_existing, override_existing):
     """Translate all PPTX files in a directory.
 
     This will:
@@ -131,6 +143,11 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive):
     - Save translated files to output directory with same filenames
     - Continue processing even if individual files fail
     """
+    # Check for conflicting flags
+    if skip_existing and override_existing:
+        click.secho("✗ Error: Cannot use both --skip and --override together", fg="red", err=True)
+        sys.exit(1)
+
     input_path = Path(input_dir)
     output_path = Path(output_dir)
 
@@ -138,24 +155,67 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive):
     output_path.mkdir(parents=True, exist_ok=True)
 
     # Find all PPTX files
-    pptx_files = list(input_path.rglob("*.pptx")) if recursive else list(input_path.glob("*.pptx"))
+    pptx_files = (
+        list(input_path.rglob("*.pptx")) if recursive else list(input_path.glob("*.pptx"))
+    )
 
     if not pptx_files:
         click.secho(f"✗ No PPTX files found in {input_dir}", fg="yellow")
         return
 
+    # Check for existing files if not overriding or skipping
+    if not skip_existing and not override_existing:
+        existing_files = []
+        for pptx_file in pptx_files:
+            rel_path = pptx_file.relative_to(input_path)
+            output_file = output_path / rel_path
+            if output_file.exists():
+                existing_files.append(str(rel_path))
+
+        if existing_files:
+            click.secho(f"\n✗ Error: {len(existing_files)} file(s) already exist in output directory:", fg="red")
+            for file in existing_files[:10]:  # Show first 10
+                click.echo(f"  - {file}")
+            if len(existing_files) > 10:
+                click.echo(f"  ... and {len(existing_files) - 10} more")
+            click.echo("\nOptions:")
+            click.echo("  --skip     Skip existing files and translate only new ones")
+            click.echo("  --override Overwrite existing files")
+            sys.exit(1)
+
     click.echo(f"Found {len(pptx_files)} PPTX file(s) to translate")
     click.echo(f"Target language: {target_lang}")
-    click.echo(f"Output directory: {output_dir}\n")
+    click.echo(f"Output directory: {output_dir}")
+    if skip_existing:
+        click.echo("Mode: Skip existing files")
+    elif override_existing:
+        click.echo("Mode: Override existing files")
+    click.echo()
 
     successful = 0
     failed = 0
+    skipped = 0
     failed_files = []
 
     for idx, pptx_file in enumerate(pptx_files, 1):
         # Calculate relative path for subdirectories
         rel_path = pptx_file.relative_to(input_path)
         output_file = output_path / rel_path
+
+        # Check if output file exists and handle based on flags
+        if output_file.exists():
+            if skip_existing:
+                click.echo(f"[{idx}/{len(pptx_files)}] Skipping: {rel_path} (already exists)")
+                skipped += 1
+                click.echo()
+                continue
+            elif not override_existing:
+                # This shouldn't happen due to earlier check, but just in case
+                click.secho(f"[{idx}/{len(pptx_files)}] Error: {rel_path} already exists", fg="red")
+                failed += 1
+                failed_files.append(str(rel_path))
+                click.echo()
+                continue
 
         # Create subdirectories in output if needed
         output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -207,6 +267,9 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive):
     # Summary
     click.echo("=" * 50)
     click.secho(f"✓ Successful: {successful}/{len(pptx_files)}", fg="green")
+
+    if skipped > 0:
+        click.secho(f"⊘ Skipped: {skipped}/{len(pptx_files)}", fg="yellow")
 
     if failed > 0:
         click.secho(f"✗ Failed: {failed}/{len(pptx_files)}", fg="red")

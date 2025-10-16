@@ -49,6 +49,12 @@ python cli.py translate-dir input_folder/ output_folder/ --target-lang es
 
 # Directory with subdirectories
 python cli.py translate-dir input_folder/ output_folder/ --target-lang es --recursive
+
+# Skip files that already exist
+python cli.py translate-dir input_folder/ output_folder/ --target-lang es --skip
+
+# Override/overwrite existing files
+python cli.py translate-dir input_folder/ output_folder/ --target-lang es --override
 ```
 
 ### Step-by-Step Workflow
