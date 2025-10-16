@@ -1,5 +1,7 @@
 # PPTX Slide Translator
 
+[![Lint and Type Check](https://github.com/YOUR_USERNAME/slidetranslator/actions/workflows/lint.yml/badge.svg)](https://github.com/YOUR_USERNAME/slidetranslator/actions/workflows/lint.yml)
+
 Translate PowerPoint presentations using Google Gemini API.
 
 ## Features
@@ -162,6 +164,16 @@ All linting and type checking configuration is in `pyproject.toml`:
 - Python 3.8+
 - Google Gemini API key
 
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+All pull requests are automatically checked with GitHub Actions for:
+- Ruff linting and formatting
+- Mypy type checking
+
+Make sure to run `make check` before submitting a PR.
+
 ## License
 
-MIT
+BSD 3-Clause License - see [LICENSE](LICENSE) for details.

@@ -22,6 +22,9 @@ ENV/
 *.json
 test_*.py
 
+# CI/CD
+.github/workflows/*.log
+
 # Distribution
 dist/
 build/

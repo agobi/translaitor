@@ -2,7 +2,8 @@
 name = "slidetranslator"
 version = "1.0.0"
 description = "Translate PowerPoint presentations using Google Gemini"
-authors = [{name = "Your Name"}]
+authors = [{name = "Attila Góbi", email = "attila.gobi@gmail.com"}]
+license = {text = "BSD-3-Clause"}
 requires-python = ">=3.8"
 dependencies = [
     "python-pptx>=0.6.21",
