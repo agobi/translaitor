@@ -245,6 +245,27 @@ With default settings (5 retries, 1s initial delay):
 
 Total maximum wait time: ~31 seconds
 
+### Structure Mismatch Auto-Retry
+
+In addition to rate limit retries, the translator automatically retries if Gemini merges or splits text elements:
+
+**How it works:**
+1. Translation completes
+2. Validator detects structure mismatch (e.g., 10 texts → 9 texts)
+3. **Automatically retries up to 2 times** with increasingly aggressive prompts
+4. Each retry explicitly warns Gemini about the previous error
+
+**Example:**
+```
+✗ Structure mismatch in slide 7:
+  Original texts (10)
+  Translated texts (9)
+
+⚠ Retrying with stricter prompt (attempt 1/2)...
+```
+
+This usually succeeds on the second attempt. If not, the error suggests using `gemini-2.5-pro` model.
+
 ### When to Adjust
 
 **Increase retries (`MAX_RETRIES=10`):**
@@ -256,6 +277,11 @@ Total maximum wait time: ~31 seconds
 - Frequent rate limiting
 - Large files causing longer processing
 - Conservative approach to avoid API abuse
+
+**Use gemini-2.5-pro model:**
+- Frequent structure mismatch errors
+- Complex slides with many text elements
+- When accuracy is more important than cost
 
 ## Best Practices
 

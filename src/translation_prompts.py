@@ -87,7 +87,7 @@ TOPIC_INSTRUCTIONS = {
 
 
 def get_translation_prompt(
-    json_data, target_lang, source_lang=None, style="direct", topic="general"
+    json_data, target_lang, source_lang=None, style="direct", topic="general", retry_attempt=0
 ):
     """Generate a translation prompt based on configuration.
 
@@ -97,6 +97,7 @@ def get_translation_prompt(
         source_lang: Optional source language code
         style: Translation style (direct, formal, casual, technical)
         topic: Topic context (diving, medical, technical, business, education, general)
+        retry_attempt: Retry attempt number (adds stronger warnings if >0)
 
     Returns:
         str: Complete prompt for translation
@@ -120,6 +121,18 @@ def get_translation_prompt(
     # Get topic instructions
     topic_instructions = TOPIC_INSTRUCTIONS.get(topic, "")
 
+    # Add extra emphasis on retries
+    retry_warning = ""
+    if retry_attempt > 0:
+        retry_warning = f"""
+
+⚠️  CRITICAL - RETRY ATTEMPT {retry_attempt}:
+The previous translation had structure errors (text elements were merged/split).
+YOU MUST PRESERVE THE EXACT NUMBER OF TEXT ELEMENTS IN EACH SLIDE.
+DO NOT COMBINE ADJACENT TEXT ELEMENTS EVEN IF THEY SEEM RELATED.
+TRANSLATE EACH TEXT ELEMENT SEPARATELY AND INDEPENDENTLY.
+Count the input texts carefully and ensure output has the EXACT same count."""
+
     # Build complete prompt
     prompt = BASE_PROMPT.format(
         source_lang_text=source_lang_text,
@@ -129,5 +142,9 @@ def get_translation_prompt(
         slide_count=slide_count,
         json_data=json_data,
     )
+
+    # Append retry warning if needed
+    if retry_warning:
+        prompt += retry_warning
 
     return prompt

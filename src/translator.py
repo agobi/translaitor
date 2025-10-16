@@ -146,13 +146,14 @@ def call_gemini_with_retry(model, prompt, max_retries=5, initial_delay=1):
     raise Exception(f"Failed after {max_retries} retry attempts")
 
 
-def translate_with_gemini(data, target_lang, source_lang=None):
+def translate_with_gemini(data, target_lang, source_lang=None, retry_attempt=0):
     """Translate JSON data using Gemini API with configurable prompts.
 
     Args:
         data: Dictionary with extracted texts
         target_lang: Target language code (e.g., 'es', 'fr', 'de')
         source_lang: Optional source language code
+        retry_attempt: Current retry attempt for structure mismatch (internal use)
 
     Returns:
         dict: Translated data in same JSON structure
@@ -172,6 +173,7 @@ def translate_with_gemini(data, target_lang, source_lang=None):
         source_lang=source_lang,
         style=style,
         topic=topic,
+        retry_attempt=retry_attempt,
     )
 
     # Get retry settings from environment
@@ -215,7 +217,7 @@ def translate_with_gemini(data, target_lang, source_lang=None):
         orig_count = len(orig_slide["texts"])
         trans_count = len(trans_slide["texts"])
         if orig_count != trans_count:
-            # Show detailed error for debugging
+            # Structure mismatch detected - show error
             print(f"\n✗ Structure mismatch in slide {i+1}:")
             print(f"  Original texts ({orig_count}):")
             for idx, text in enumerate(orig_slide["texts"][:5]):  # Show first 5
@@ -231,11 +233,18 @@ def translate_with_gemini(data, target_lang, source_lang=None):
             if trans_count > 5:
                 print(f"    ... and {trans_count - 5} more")
 
+            # Retry with more aggressive prompt if this is first attempt
+            max_structure_retries = 2
+            if retry_attempt < max_structure_retries:
+                print(f"\n⚠ Retrying with stricter prompt (attempt {retry_attempt + 1}/{max_structure_retries})...")
+                time.sleep(2)  # Brief delay before retry
+                return translate_with_gemini(data, target_lang, source_lang, retry_attempt + 1)
+
             raise ValueError(
-                f"Text count mismatch in slide {i+1}: "
+                f"Text count mismatch in slide {i+1} after {max_structure_retries} attempts: "
                 f"original has {orig_count} texts, translated has {trans_count} texts. "
-                f"Gemini API did not preserve the exact JSON structure. "
-                f"Try running the translation again."
+                f"Gemini API is merging/splitting text elements. "
+                f"Try using 'gemini-2.5-pro' model for better structure preservation."
             )
 
     return translated_data
