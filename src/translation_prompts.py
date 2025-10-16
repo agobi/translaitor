@@ -1,5 +1,7 @@
 """Translation prompt templates for different styles and topics."""
 
+from typing import Union
+
 # Base translation prompt template
 BASE_PROMPT = """Translate the following JSON structure{source_lang_text} to {target_lang}.
 
@@ -7,17 +9,26 @@ BASE_PROMPT = """Translate the following JSON structure{source_lang_text} to {ta
 
 {topic_instructions}
 
-CRITICAL REQUIREMENTS:
+CRITICAL REQUIREMENTS - FOLLOW EXACTLY:
 1. Preserve the EXACT JSON structure with "slides" array and "texts" arrays
-2. Only translate the text content inside the "texts" arrays
+2. ONLY translate the text content inside the "texts" arrays
 3. Do NOT translate the JSON keys ("slides", "texts")
-4. Return ONLY valid JSON, no additional text or explanation
-5. Maintain the same number of slides and text elements
+4. Return ONLY valid JSON, no additional text, explanation, or markdown
+5. MUST maintain the EXACT same number of slides and text elements
+6. EVERY text element in input MUST have EXACTLY ONE corresponding text element in output
+7. Do NOT merge, split, or skip any text elements
+8. Empty strings "" should remain as empty strings ""
+9. Preserve line breaks (\\n) within text elements
+
+VALIDATION:
+- Input has {slide_count} slides
+- Each slide has a specific number of texts - preserve this EXACTLY
+- If input texts array has N elements, output texts array MUST have N elements
 
 Input JSON:
 {json_data}
 
-Return the translated JSON:"""
+Return the translated JSON (ONLY the JSON, nothing else):"""
 
 
 # Style-specific instructions
@@ -90,6 +101,16 @@ def get_translation_prompt(
     Returns:
         str: Complete prompt for translation
     """
+    import json as json_module
+
+    # Parse JSON to count slides for validation
+    slide_count: Union[int, str]
+    try:
+        data = json_module.loads(json_data)
+        slide_count = len(data.get("slides", []))
+    except (json_module.JSONDecodeError, KeyError, TypeError):
+        slide_count = "unknown"
+
     # Format source language text
     source_lang_text = f" from {source_lang}" if source_lang else ""
 
@@ -105,6 +126,7 @@ def get_translation_prompt(
         target_lang=target_lang,
         style_instructions=style_instructions,
         topic_instructions=topic_instructions,
+        slide_count=slide_count,
         json_data=json_data,
     )
 

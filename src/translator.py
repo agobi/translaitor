@@ -212,11 +212,30 @@ def translate_with_gemini(data, target_lang, source_lang=None):
         )
 
     for i, (orig_slide, trans_slide) in enumerate(zip(data["slides"], translated_data["slides"])):
-        if len(orig_slide["texts"]) != len(trans_slide["texts"]):
+        orig_count = len(orig_slide["texts"])
+        trans_count = len(trans_slide["texts"])
+        if orig_count != trans_count:
+            # Show detailed error for debugging
+            print(f"\n✗ Structure mismatch in slide {i+1}:")
+            print(f"  Original texts ({orig_count}):")
+            for idx, text in enumerate(orig_slide["texts"][:5]):  # Show first 5
+                preview = text[:50] + "..." if len(text) > 50 else text
+                print(f"    [{idx}] {repr(preview)}")
+            if orig_count > 5:
+                print(f"    ... and {orig_count - 5} more")
+
+            print(f"  Translated texts ({trans_count}):")
+            for idx, text in enumerate(trans_slide["texts"][:5]):  # Show first 5
+                preview = text[:50] + "..." if len(text) > 50 else text
+                print(f"    [{idx}] {repr(preview)}")
+            if trans_count > 5:
+                print(f"    ... and {trans_count - 5} more")
+
             raise ValueError(
-                f"Text count mismatch in slide {i}: "
-                f"original has {len(orig_slide['texts'])} texts, "
-                f"translated has {len(trans_slide['texts'])} texts"
+                f"Text count mismatch in slide {i+1}: "
+                f"original has {orig_count} texts, translated has {trans_count} texts. "
+                f"Gemini API did not preserve the exact JSON structure. "
+                f"Try running the translation again."
             )
 
     return translated_data
