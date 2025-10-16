@@ -19,9 +19,26 @@ source venv/bin/activate
 ## Usage Examples
 
 ### Quick Translation (Recommended)
-Translate entire PPTX in one command:
+
+**Single file:**
 ```bash
 python cli.py translate-pptx presentation.pptx presentation_es.pptx --target-lang es
+```
+
+**Entire directory:**
+```bash
+python cli.py translate-dir EN/ ES/ --target-lang es
+```
+
+This will:
+- Find all .pptx files in EN/ folder
+- Translate each one to Spanish
+- Save translated files to ES/ folder with same filenames
+- Show progress and summary
+
+**Directory with subdirectories:**
+```bash
+python cli.py translate-dir EN/ ES/ --target-lang es --recursive
 ```
 
 ### Step-by-Step Workflow

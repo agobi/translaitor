@@ -35,7 +35,14 @@ cp .env.example .env
 
 ### Quick Translation (Full Pipeline)
 ```bash
+# Single file
 python cli.py translate-pptx input.pptx output.pptx --target-lang es
+
+# Entire directory
+python cli.py translate-dir input_folder/ output_folder/ --target-lang es
+
+# Directory with subdirectories
+python cli.py translate-dir input_folder/ output_folder/ --target-lang es --recursive
 ```
 
 ### Step-by-Step Workflow
@@ -62,12 +69,14 @@ The CLI uses Click for a modern, user-friendly interface with automatic help gen
 - **`extract`** - Extract text from PPTX to JSON
 - **`translate`** - Translate JSON using Gemini API  
 - **`reintegrate`** - Reintegrate translated text into PPTX
-- **`translate-pptx`** - Full translation pipeline (recommended)
+- **`translate-pptx`** - Full translation pipeline for single file (recommended)
+- **`translate-dir`** - Batch translate all PPTX files in a directory
 
 Get help for any command:
 ```bash
 python cli.py --help
 python cli.py translate-pptx --help
+python cli.py translate-dir --help
 ```
 
 ## Configuration

@@ -113,5 +113,105 @@ def translate_pptx(input, output, target_lang, source_lang):
         sys.exit(1)
 
 
+@cli.command('translate-dir')
+@click.argument('input_dir', type=click.Path(exists=True, file_okay=False, dir_okay=True))
+@click.argument('output_dir', type=click.Path())
+@click.option('--target-lang', required=True, help='Target language code (e.g., es, fr, de)')
+@click.option('--source-lang', default=None, help='Source language code (optional)')
+@click.option('--recursive/--no-recursive', default=False, help='Process subdirectories recursively')
+def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive):
+    """Translate all PPTX files in a directory.
+    
+    This will:
+    - Find all .pptx files in the input directory
+    - Translate each one to the target language
+    - Save translated files to output directory with same filenames
+    - Continue processing even if individual files fail
+    """
+    input_path = Path(input_dir)
+    output_path = Path(output_dir)
+    
+    # Create output directory if it doesn't exist
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    # Find all PPTX files
+    if recursive:
+        pptx_files = list(input_path.rglob('*.pptx'))
+    else:
+        pptx_files = list(input_path.glob('*.pptx'))
+    
+    if not pptx_files:
+        click.secho(f"✗ No PPTX files found in {input_dir}", fg='yellow')
+        return
+    
+    click.echo(f"Found {len(pptx_files)} PPTX file(s) to translate")
+    click.echo(f"Target language: {target_lang}")
+    click.echo(f"Output directory: {output_dir}\n")
+    
+    successful = 0
+    failed = 0
+    failed_files = []
+    
+    for idx, pptx_file in enumerate(pptx_files, 1):
+        # Calculate relative path for subdirectories
+        rel_path = pptx_file.relative_to(input_path)
+        output_file = output_path / rel_path
+        
+        # Create subdirectories in output if needed
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        
+        click.echo(f"[{idx}/{len(pptx_files)}] Processing: {rel_path}")
+        
+        try:
+            # Create temporary files
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_extract:
+                extracted_path = tmp_extract.name
+            
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_translate:
+                translated_path = tmp_translate.name
+            
+            # Extract
+            extractor.extract(str(pptx_file), extracted_path)
+            
+            # Translate
+            translator.translate(extracted_path, translated_path, target_lang, source_lang)
+            
+            # Reintegrate
+            reintegrator.reintegrate(str(pptx_file), translated_path, str(output_file))
+            
+            # Cleanup temp files
+            os.unlink(extracted_path)
+            os.unlink(translated_path)
+            
+            click.secho(f"  ✓ Success: {output_file.name}", fg='green')
+            successful += 1
+            
+        except Exception as e:
+            click.secho(f"  ✗ Failed: {e}", fg='red')
+            failed += 1
+            failed_files.append(str(rel_path))
+            
+            # Cleanup temp files on error
+            try:
+                if 'extracted_path' in locals():
+                    os.unlink(extracted_path)
+                if 'translated_path' in locals():
+                    os.unlink(translated_path)
+            except Exception:
+                pass
+        
+        click.echo()  # Empty line between files
+    
+    # Summary
+    click.echo("=" * 50)
+    click.secho(f"✓ Successful: {successful}/{len(pptx_files)}", fg='green')
+    
+    if failed > 0:
+        click.secho(f"✗ Failed: {failed}/{len(pptx_files)}", fg='red')
+        click.echo("\nFailed files:")
+        for failed_file in failed_files:
+            click.echo(f"  - {failed_file}")
+
+
 if __name__ == '__main__':
     cli()
