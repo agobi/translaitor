@@ -6,10 +6,13 @@ Translate PowerPoint presentations using Google Gemini API.
 
 ## Features
 
-- Extract text from PPTX files to structured JSON
-- Translate text using Google Gemini
-- Reintegrate translated text back into PPTX
-- CLI-based workflow
+- Extract text from PPTX files to structured JSON (preserves formatting per run)
+- Translate text using Google Gemini with intelligent retry logic
+- Reintegrate translated text back into PPTX (preserves fonts, colors, sizes)
+- CLI-based workflow with batch directory processing
+- Configurable translation styles and domain-specific terminology
+- Smart retry logic that respects API `Retry-After` headers with exponential backoff fallback
+- Automatic handling of rate limits, timeouts, and transient errors
 
 ## Setup
 
@@ -29,6 +32,7 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and configure:
 # - GEMINI_API_KEY: Your Gemini API key (required)
+# - GEMINI_MODEL: Model to use (default: gemini-2.5-flash)
 # - TRANSLATION_STYLE: Translation style (direct, formal, casual, technical)
 # - TRANSLATION_TOPIC: Content topic (diving, medical, technical, business, education, general)
 ```
@@ -80,6 +84,48 @@ python cli.py --help
 python cli.py translate-pptx --help
 python cli.py translate-dir --help
 ```
+
+## Retry Logic and Error Handling
+
+The translator includes intelligent retry logic to handle API rate limits and transient errors gracefully:
+
+### How It Works
+
+1. **API-First Approach**: Checks for `Retry-After` header from Gemini API
+   - If provided, waits the exact time recommended by the API
+   - Example: API says "retry in 3 seconds", we wait exactly 3 seconds
+
+2. **Exponential Backoff Fallback**: If no header is provided
+   - 1st retry: 1 second
+   - 2nd retry: 2 seconds
+   - 3rd retry: 4 seconds
+   - 4th retry: 8 seconds
+   - 5th retry: 16 seconds
+
+3. **Automatic Error Handling**:
+   - **Rate Limiting (429)**: Automatically retries with smart timing
+   - **Service Errors (503/500)**: Handles temporary server issues
+   - **Timeouts**: Retries with longer delays
+   - **Other Errors**: Fails fast without retrying
+
+### Example Output
+
+```bash
+[2/10] Processing: Chapter_2.pptx
+  ⚠ Rate limited by Gemini API. Retrying in 3s... (attempt 1/5)
+  ✓ Success: Chapter_2.pptx
+```
+
+### Configuration
+
+Adjust retry behavior in `.env`:
+
+```bash
+MAX_RETRIES=5              # Number of retry attempts (default: 5)
+INITIAL_RETRY_DELAY=1      # Initial delay for fallback (default: 1)
+```
+
+For detailed retry configuration, see [CONFIGURATION.md](CONFIGURATION.md#retry-configuration).
 
 ## Configuration
 

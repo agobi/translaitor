@@ -2,9 +2,11 @@
 
 import json
 import os
+import time
 
 import google.generativeai as genai
 from dotenv import load_dotenv
+from google.api_core import exceptions as google_exceptions
 
 from .translation_prompts import get_translation_prompt
 
@@ -46,8 +48,102 @@ def configure_gemini():
 
     genai.configure(api_key=api_key)
 
-    model_name = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
     return genai.GenerativeModel(model_name)
+
+
+def call_gemini_with_retry(model, prompt, max_retries=5, initial_delay=1):
+    """Call Gemini API with intelligent retry logic.
+
+    Respects Retry-After headers from the API and uses exponential backoff as fallback.
+
+    Args:
+        model: Gemini model instance
+        prompt: Prompt to send to the API
+        max_retries: Maximum number of retry attempts (default: 5)
+        initial_delay: Initial delay in seconds for fallback (default: 1)
+
+    Returns:
+        Response from Gemini API
+
+    Raises:
+        Exception: If all retries are exhausted
+    """
+    for attempt in range(max_retries):
+        try:
+            response = model.generate_content(prompt)
+            return response
+
+        except google_exceptions.ResourceExhausted as e:
+            # Rate limiting (429) - check for Retry-After header
+            if attempt < max_retries - 1:
+                # Try to get retry-after from exception metadata
+                retry_after = None
+                if hasattr(e, "response") and e.response:
+                    # Check for Retry-After header in response
+                    retry_after = e.response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            wait_time = int(retry_after)
+                        except (ValueError, TypeError):
+                            wait_time = None
+
+                # Fallback to exponential backoff if no retry-after
+                if not retry_after or wait_time is None:
+                    wait_time = initial_delay * (2**attempt)
+
+                print(
+                    f"⚠ Rate limited by Gemini API. "
+                    f"Retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(wait_time)
+            else:
+                print(f"✗ Rate limit exceeded after {max_retries} attempts")
+                raise
+
+        except (google_exceptions.ServiceUnavailable, google_exceptions.InternalServerError) as e:
+            # Transient server errors - check for Retry-After header
+            if attempt < max_retries - 1:
+                retry_after = None
+                if hasattr(e, "response") and e.response:
+                    retry_after = e.response.headers.get("Retry-After")
+                    if retry_after:
+                        try:
+                            wait_time = int(retry_after)
+                        except (ValueError, TypeError):
+                            wait_time = None
+
+                if not retry_after or wait_time is None:
+                    wait_time = initial_delay * (2**attempt)
+
+                print(
+                    f"⚠ Gemini API service error. "
+                    f"Retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(wait_time)
+            else:
+                print(f"✗ Service error persisted after {max_retries} attempts")
+                raise
+
+        except google_exceptions.DeadlineExceeded:
+            # Timeout - retry with longer delay
+            if attempt < max_retries - 1:
+                wait_time = initial_delay * (2 ** (attempt + 1))  # Longer backoff for timeouts
+                print(
+                    f"⚠ Request timeout. "
+                    f"Retrying in {wait_time}s... (attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(wait_time)
+            else:
+                print(f"✗ Timeout persisted after {max_retries} attempts")
+                raise
+
+        except Exception as e:
+            # Other errors - don't retry
+            print(f"✗ Gemini API error: {e}")
+            raise
+
+    raise Exception(f"Failed after {max_retries} retry attempts")
 
 
 def translate_with_gemini(data, target_lang, source_lang=None):
@@ -78,8 +174,12 @@ def translate_with_gemini(data, target_lang, source_lang=None):
         topic=topic,
     )
 
-    # Call Gemini API
-    response = model.generate_content(prompt)
+    # Get retry settings from environment
+    max_retries = int(os.getenv("MAX_RETRIES", "5"))
+    initial_delay = int(os.getenv("INITIAL_RETRY_DELAY", "1"))
+
+    # Call Gemini API with retry logic
+    response = call_gemini_with_retry(model, prompt, max_retries, initial_delay)
 
     # Parse response
     response_text = response.text.strip()

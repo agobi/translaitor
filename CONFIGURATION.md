@@ -8,12 +8,11 @@ The PPTX translator supports customizable translation prompts to adapt the trans
 
 Edit `.env` to configure translation behavior:
 
-```bash
-# API Configuration
-GEMINI_API_KEY=your_api_key_here
-GEMINI_MODEL=gemini-1.5-flash
+### Example Configuration for Diving Content
 
-# Translation Configuration
+```bash
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.5-flash
 TRANSLATION_STYLE=direct
 TRANSLATION_TOPIC=diving
 ```
@@ -174,6 +173,90 @@ python cli.py translate-pptx sample.pptx output.pptx --target-lang es
 # Review output.pptx before processing larger files
 ```
 
+## Retry Configuration
+
+The translator includes intelligent automatic retry logic that prioritizes API guidance while providing robust fallback strategies.
+
+### How It Works
+
+The retry system uses a **two-tier approach**:
+
+#### 1. API-Guided Retry (Primary)
+
+When Gemini API returns rate limit or service errors, it may include a `Retry-After` header that tells you exactly when to retry:
+
+```
+Rate Limited → Check Retry-After header → Wait exact time → Retry
+```
+
+**Example:**
+- API returns 429 (rate limited) with `Retry-After: 3`
+- System waits exactly 3 seconds
+- Retries the request
+
+This is **optimal** because:
+- Respects API's current load and capacity
+- Minimizes unnecessary waiting
+- Complies with API's rate limiting strategy
+
+#### 2. Exponential Backoff (Fallback)
+
+If no `Retry-After` header is provided, uses exponential backoff:
+
+```
+1st retry: 1s → 2nd: 2s → 3rd: 4s → 4th: 8s → 5th: 16s
+```
+
+### Default Behavior
+
+- **Max Retries**: 5 attempts
+- **Initial Delay**: 1 second (for fallback)
+- **Primary Strategy**: Respects API `Retry-After` headers
+- **Fallback Strategy**: Exponential backoff
+- **Smart**: Always uses API guidance when available
+
+### Handles These Errors Automatically
+
+1. **Rate Limiting (429)** - Reads `Retry-After`, falls back to exponential backoff
+2. **Service Unavailable (503)** - Reads `Retry-After`, falls back to exponential backoff
+3. **Timeout Errors** - Uses exponential backoff (no header expected)
+4. **Internal Server Errors (500)** - Reads `Retry-After`, falls back to exponential backoff
+5. **Other Errors** - Fails immediately (no retry)
+
+### Custom Configuration
+
+Set in `.env` file:
+
+```bash
+# Retry Configuration (optional)
+MAX_RETRIES=5              # Number of retry attempts (default: 5)
+INITIAL_RETRY_DELAY=1      # Initial delay in seconds (default: 1)
+```
+
+### Example Backoff Timeline
+
+With default settings (5 retries, 1s initial delay):
+- Attempt 1: Immediate
+- Attempt 2: Wait 1s
+- Attempt 3: Wait 2s
+- Attempt 4: Wait 4s
+- Attempt 5: Wait 8s
+- Attempt 6: Wait 16s
+
+Total maximum wait time: ~31 seconds
+
+### When to Adjust
+
+**Increase retries (`MAX_RETRIES=10`):**
+- Processing large batches
+- During peak API usage hours
+- For critical production workflows
+
+**Increase delay (`INITIAL_RETRY_DELAY=2`):**
+- Frequent rate limiting
+- Large files causing longer processing
+- Conservative approach to avoid API abuse
+
 ## Best Practices
 
 1. **Always use `diving` topic for dive training materials** - ensures correct technical terminology
@@ -181,3 +264,4 @@ python cli.py translate-pptx sample.pptx output.pptx --target-lang es
 3. **Test with sample content first** - verify configuration before large batches
 4. **Keep safety information exact** - numerical values are always preserved
 5. **Review translated content** - especially for certification materials
+6. **Monitor retry messages** - Adjust retry settings if you see frequent rate limiting
