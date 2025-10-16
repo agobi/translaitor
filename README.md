@@ -22,10 +22,13 @@ source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 ```
 
-3. **Configure API key:**
+3. **Configure API key and translation settings:**
 ```bash
 cp .env.example .env
-# Edit .env and add your Gemini API key
+# Edit .env and configure:
+# - GEMINI_API_KEY: Your Gemini API key (required)
+# - TRANSLATION_STYLE: Translation style (direct, formal, casual, technical)
+# - TRANSLATION_TOPIC: Content topic (diving, medical, technical, business, education, general)
 ```
 
 ## Usage
@@ -58,6 +61,41 @@ python cli.py reintegrate input.pptx translated.json output.pptx
 - `translate <input.json> <output.json> --target-lang <lang>` - Translate JSON
 - `reintegrate <original.pptx> <translated.json> <output.pptx>` - Create translated PPTX
 - `translate-pptx <input.pptx> <output.pptx> --target-lang <lang>` - Full pipeline
+
+## Configuration
+
+### Translation Styles
+
+Configure `TRANSLATION_STYLE` in `.env`:
+- **direct** (default): Clear, concise, straightforward language
+- **formal**: Professional, complete sentences, formal register
+- **casual**: Conversational, friendly, approachable tone
+- **technical**: Precise technical language with exact terminology
+
+### Translation Topics
+
+Configure `TRANSLATION_TOPIC` in `.env`:
+- **diving** (recommended for diving content): Maintains correct diving terminology, safety-critical information
+- **medical**: Accurate medical terminology and specifications
+- **technical**: Technical documentation with precise specifications
+- **business**: Business terminology and professional tone
+- **education**: Clear pedagogical language for learners
+- **general** (default): Standard translation without topic-specific guidance
+
+### Example Configuration for Diving Content
+
+```bash
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-1.5-flash
+TRANSLATION_STYLE=direct
+TRANSLATION_TOPIC=diving
+```
+
+This configuration will:
+- Use direct, clear language
+- Maintain correct diving terminology (depth, decompression, etc.)
+- Preserve safety-critical numerical values
+- Use terminology recognized by diving organizations
 
 ## Requirements
 

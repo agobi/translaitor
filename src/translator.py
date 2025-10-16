@@ -4,6 +4,7 @@ import json
 import os
 import google.generativeai as genai
 from dotenv import load_dotenv
+from .translation_prompts import get_translation_prompt
 
 
 def load_json(json_path):
@@ -48,7 +49,7 @@ def configure_gemini():
 
 
 def translate_with_gemini(data, target_lang, source_lang=None):
-    """Translate JSON data using Gemini API.
+    """Translate JSON data using Gemini API with configurable prompts.
     
     Args:
         data: Dictionary with extracted texts
@@ -58,24 +59,22 @@ def translate_with_gemini(data, target_lang, source_lang=None):
     Returns:
         dict: Translated data in same JSON structure
     """
+    load_dotenv()  # Reload to get translation config
     model = configure_gemini()
     
-    # Create the prompt
-    source_lang_text = f" from {source_lang}" if source_lang else ""
+    # Get translation style and topic from environment
+    style = os.getenv('TRANSLATION_STYLE', 'direct')
+    topic = os.getenv('TRANSLATION_TOPIC', 'general')
     
-    prompt = f"""Translate the following JSON structure{source_lang_text} to {target_lang}.
-
-CRITICAL REQUIREMENTS:
-1. Preserve the EXACT JSON structure with "slides" array and "texts" arrays
-2. Only translate the text content inside the "texts" arrays
-3. Do NOT translate the JSON keys ("slides", "texts")
-4. Return ONLY valid JSON, no additional text or explanation
-5. Maintain the same number of slides and text elements
-
-Input JSON:
-{json.dumps(data, ensure_ascii=False, indent=2)}
-
-Return the translated JSON:"""
+    # Generate prompt using configurable template
+    json_data = json.dumps(data, ensure_ascii=False, indent=2)
+    prompt = get_translation_prompt(
+        json_data=json_data,
+        target_lang=target_lang,
+        source_lang=source_lang,
+        style=style,
+        topic=topic
+    )
 
     # Call Gemini API
     response = model.generate_content(prompt)

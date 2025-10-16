@@ -6,7 +6,10 @@
 # Run the setup script
 ./setup.sh
 
-# Edit .env and add your Gemini API key
+# Edit .env and configure:
+# - Add your Gemini API key (required)
+# - Set TRANSLATION_STYLE=direct (for clear language)
+# - Set TRANSLATION_TOPIC=diving (for diving content)
 nano .env  # or use your preferred editor
 
 # Activate virtual environment
