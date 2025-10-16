@@ -1,0 +1,118 @@
+[project]
+name = "slidetranslator"
+version = "1.0.0"
+description = "Translate PowerPoint presentations using Google Gemini"
+authors = [{name = "Your Name"}]
+requires-python = ">=3.8"
+dependencies = [
+    "python-pptx>=0.6.21",
+    "google-generativeai>=0.3.0",
+    "python-dotenv>=1.0.0",
+    "click>=8.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.1.0",
+    "mypy>=1.7.0",
+    "types-requests>=2.31.0",
+]
+
+[tool.ruff]
+# Set the maximum line length
+line-length = 100
+
+# Assume Python 3.8+
+target-version = "py38"
+
+# Exclude directories
+exclude = [
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "*.egg-info",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+# Enable specific rule sets
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",  # Line too long (handled by formatter)
+    "B008",  # Do not perform function calls in argument defaults
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.mypy]
+# Basic settings
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Set to true when ready for full type checking
+disallow_any_unimported = false
+
+# Error checking
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+
+# Import handling
+ignore_missing_imports = true
+follow_imports = "normal"
+
+# Output
+show_error_codes = true
+pretty = true
+
+# Exclude patterns
+exclude = [
+    "venv/",
+    ".venv/",
+    "build/",
+    "dist/",
+]
+
+[[tool.mypy.overrides]]
+module = "google.generativeai.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pptx.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "dotenv"
+ignore_missing_imports = true
+
+[tool.ruff.format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Indent with spaces
+indent-style = "space"
+
+# Like Black, respect magic trailing commas
+skip-magic-trailing-comma = false
+
+# Like Black, automatically detect the appropriate line ending
+line-ending = "auto"

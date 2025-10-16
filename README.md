@@ -114,6 +114,49 @@ This configuration will:
 - Preserve safety-critical numerical values
 - Use terminology recognized by diving organizations
 
+## Development
+
+### Linting and Type Checking
+
+The project uses Ruff for linting/formatting and mypy for type checking.
+
+**Install development dependencies:**
+```bash
+pip install -r requirements-dev.txt
+```
+
+**Available commands:**
+```bash
+# Check code with ruff
+make lint
+
+# Auto-format code with ruff
+make format
+
+# Type check with mypy
+make type-check
+
+# Run all checks
+make check
+```
+
+**Or use directly:**
+```bash
+# Ruff
+ruff check .          # Check for issues
+ruff format .         # Format code
+ruff check --fix .    # Auto-fix issues
+
+# Mypy
+mypy src/ cli.py
+```
+
+### Configuration
+
+All linting and type checking configuration is in `pyproject.toml`:
+- **Ruff**: Line length 100, Python 3.8+, common rule sets enabled
+- **Mypy**: Type checking with imports ignored for third-party libs
+
 ## Requirements
 
 - Python 3.8+

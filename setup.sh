@@ -18,6 +18,14 @@ source venv/bin/activate
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
+# Ask if user wants dev dependencies
+read -p "Install development dependencies (ruff, mypy)? (y/n) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "Installing development dependencies..."
+    pip install -r requirements-dev.txt
+fi
+
 # Create .env file if it doesn't exist
 if [ ! -f ".env" ]; then
     echo "Creating .env file..."
