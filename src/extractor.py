@@ -5,29 +5,31 @@ from pptx import Presentation
 
 
 def extract_text_from_shape(shape):
-    """Extract text from a shape, handling various shape types.
+    """Extract text from a shape, extracting each RUN separately to preserve formatting.
     
     Args:
         shape: A shape object from python-pptx
         
     Returns:
-        list: List of text strings found in the shape
+        list: List of text strings (one per run with formatting)
     """
     texts = []
     
-    # Handle shapes with text frames
+    # Handle shapes with text frames - extract each RUN separately
     if hasattr(shape, "text_frame") and shape.has_text_frame:
-        text = shape.text_frame.text.strip()
-        if text:
-            texts.append(text)
+        for paragraph in shape.text_frame.paragraphs:
+            for run in paragraph.runs:
+                if run.text:  # Include runs with any text
+                    texts.append(run.text)
     
-    # Handle tables
+    # Handle tables - extract each cell's runs
     if hasattr(shape, "table"):
         for row in shape.table.rows:
             for cell in row.cells:
-                text = cell.text_frame.text.strip()
-                if text:
-                    texts.append(text)
+                for paragraph in cell.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        if run.text:
+                            texts.append(run.text)
     
     # Handle grouped shapes (recursively)
     if hasattr(shape, "shapes"):

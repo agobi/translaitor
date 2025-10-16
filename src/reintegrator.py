@@ -53,86 +53,73 @@ def set_shape_text(shape, text):
     return count
 
 
-def replace_text_preserve_formatting(text_frame, new_text):
-    """Replace text while preserving formatting.
+def replace_runs_with_text_list(text_frame, text_list):
+    """Replace runs with a list of texts (one text per run).
     
-    Strategy: Distribute text proportionally across runs to preserve formatting.
+    This matches the extraction: each run's text is extracted separately,
+    and we replace each run's text individually. Formatting is automatically preserved.
     
     Args:
         text_frame: Text frame to modify
-        new_text: New text to set
+        text_list: List of text strings (one per run)
     """
     if not text_frame.paragraphs:
-        text_frame.text = new_text
-        return
+        return 0
     
-    # Collect all runs that have text (don't use strip, just check if text exists)
-    runs_with_text = []
+    # Collect all runs that have text
+    runs = []
     for para in text_frame.paragraphs:
         for run in para.runs:
-            if run.text:  # Any text at all, including whitespace
-                runs_with_text.append(run)
+            if run.text:
+                runs.append(run)
     
-    if not runs_with_text:
-        text_frame.text = new_text
-        return
+    if not runs:
+        return 0
     
-    # If only one run, just replace its text
-    if len(runs_with_text) == 1:
-        runs_with_text[0].text = new_text
-        return
+    # Replace each run's text with corresponding text from list
+    count = 0
+    for i, (run, new_text) in enumerate(zip(runs, text_list)):
+        run.text = new_text
+        count += 1
     
-    # Distribute text proportionally across runs
-    original_lengths = [len(run.text) for run in runs_with_text]
-    total_original_length = sum(original_lengths)
-    
-    if total_original_length == 0:
-        runs_with_text[0].text = new_text
-    else:
-        proportions = [length / total_original_length for length in original_lengths]
-        new_text_length = len(new_text)
-        current_pos = 0
-        
-        for i, (run, proportion) in enumerate(zip(runs_with_text, proportions)):
-            if i == len(runs_with_text) - 1:
-                run.text = new_text[current_pos:]
-            else:
-                run_length = int(new_text_length * proportion)
-                if run_length == 0 and current_pos < new_text_length:
-                    run_length = 1
-                run.text = new_text[current_pos:current_pos + run_length]
-                current_pos += run_length
+    return count
 
 
 def reintegrate_text_into_shape(shape, text_iterator):
     """Reintegrate translated text into a shape.
+    
+    Now works at RUN level - each extracted run gets replaced individually.
     
     Args:
         shape: A shape object from python-pptx
         text_iterator: Iterator for translated texts
         
     Returns:
-        int: Number of text elements replaced
+        int: Number of text elements (runs) replaced
     """
     count = 0
     
-    # Handle shapes with text frames
+    # Handle shapes with text frames - replace each RUN
     if hasattr(shape, "text_frame") and shape.has_text_frame:
-        if shape.text_frame.text.strip():
-            translated_text = text_iterator.get_next()
-            if translated_text is not None:
-                replace_text_preserve_formatting(shape.text_frame, translated_text)
-                count += 1
+        for paragraph in shape.text_frame.paragraphs:
+            for run in paragraph.runs:
+                if run.text:
+                    translated_text = text_iterator.get_next()
+                    if translated_text is not None:
+                        run.text = translated_text
+                        count += 1
     
-    # Handle tables
+    # Handle tables - replace each cell's runs
     if hasattr(shape, "table"):
         for row in shape.table.rows:
             for cell in row.cells:
-                if cell.text_frame.text.strip():
-                    translated_text = text_iterator.get_next()
-                    if translated_text is not None:
-                        replace_text_preserve_formatting(cell.text_frame, translated_text)
-                        count += 1
+                for paragraph in cell.text_frame.paragraphs:
+                    for run in paragraph.runs:
+                        if run.text:
+                            translated_text = text_iterator.get_next()
+                            if translated_text is not None:
+                                run.text = translated_text
+                                count += 1
     
     # Handle grouped shapes (recursively)
     if hasattr(shape, "shapes"):
