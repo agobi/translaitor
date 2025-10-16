@@ -46,11 +46,7 @@ def set_shape_text(shape, text):
     count = 0
 
     # Handle shapes with text frames
-    if (
-        hasattr(shape, "text_frame")
-        and shape.has_text_frame
-        and shape.text_frame.text.strip()
-    ):
+    if hasattr(shape, "text_frame") and shape.has_text_frame and shape.text_frame.text.strip():
         shape.text_frame.text = text
         count = 1
 

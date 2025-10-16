@@ -138,9 +138,7 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive):
     output_path.mkdir(parents=True, exist_ok=True)
 
     # Find all PPTX files
-    pptx_files = (
-        list(input_path.rglob("*.pptx")) if recursive else list(input_path.glob("*.pptx"))
-    )
+    pptx_files = list(input_path.rglob("*.pptx")) if recursive else list(input_path.glob("*.pptx"))
 
     if not pptx_files:
         click.secho(f"✗ No PPTX files found in {input_dir}", fg="yellow")
