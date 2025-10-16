@@ -129,12 +129,12 @@ def translate_pptx(input, output, target_lang, source_lang):
     help="Skip files that already exist in output directory",
 )
 @click.option(
-    "--override",
-    "override_existing",
+    "--overwrite",
+    "overwrite_existing",
     is_flag=True,
-    help="Override/overwrite existing files in output directory",
+    help="Overwrite existing files in output directory",
 )
-def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, skip_existing, override_existing):
+def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, skip_existing, overwrite_existing):
     """Translate all PPTX files in a directory.
 
     This will:
@@ -144,8 +144,8 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
     - Continue processing even if individual files fail
     """
     # Check for conflicting flags
-    if skip_existing and override_existing:
-        click.secho("✗ Error: Cannot use both --skip and --override together", fg="red", err=True)
+    if skip_existing and overwrite_existing:
+        click.secho("✗ Error: Cannot use both --skip and --overwrite together", fg="red", err=True)
         sys.exit(1)
 
     input_path = Path(input_dir)
@@ -163,8 +163,8 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
         click.secho(f"✗ No PPTX files found in {input_dir}", fg="yellow")
         return
 
-    # Check for existing files if not overriding or skipping
-    if not skip_existing and not override_existing:
+    # Check for existing files if not overwriting or skipping
+    if not skip_existing and not overwrite_existing:
         existing_files = []
         for pptx_file in pptx_files:
             rel_path = pptx_file.relative_to(input_path)
@@ -179,8 +179,8 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
             if len(existing_files) > 10:
                 click.echo(f"  ... and {len(existing_files) - 10} more")
             click.echo("\nOptions:")
-            click.echo("  --skip     Skip existing files and translate only new ones")
-            click.echo("  --override Overwrite existing files")
+            click.echo("  --skip      Skip existing files and translate only new ones")
+            click.echo("  --overwrite Overwrite existing files")
             sys.exit(1)
 
     click.echo(f"Found {len(pptx_files)} PPTX file(s) to translate")
@@ -188,8 +188,8 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
     click.echo(f"Output directory: {output_dir}")
     if skip_existing:
         click.echo("Mode: Skip existing files")
-    elif override_existing:
-        click.echo("Mode: Override existing files")
+    elif overwrite_existing:
+        click.echo("Mode: Overwrite existing files")
     click.echo()
 
     successful = 0
@@ -209,7 +209,7 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
                 skipped += 1
                 click.echo()
                 continue
-            elif not override_existing:
+            elif not overwrite_existing:
                 # This shouldn't happen due to earlier check, but just in case
                 click.secho(f"[{idx}/{len(pptx_files)}] Error: {rel_path} already exists", fg="red")
                 failed += 1

@@ -50,9 +50,9 @@ python cli.py translate-dir EN/ ES/ --target-lang es --skip
 ```
 Skips files that already exist in output directory. Useful for resuming interrupted batches.
 
-**Re-translate everything (override existing):**
+**Re-translate everything (overwrite existing):**
 ```bash
-python cli.py translate-dir EN/ ES/ --target-lang es --override
+python cli.py translate-dir EN/ ES/ --target-lang es --overwrite
 ```
 Overwrites existing files. Use this to re-translate with updated settings.
 

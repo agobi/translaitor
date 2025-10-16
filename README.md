@@ -53,8 +53,8 @@ python cli.py translate-dir input_folder/ output_folder/ --target-lang es --recu
 # Skip files that already exist
 python cli.py translate-dir input_folder/ output_folder/ --target-lang es --skip
 
-# Override/overwrite existing files
-python cli.py translate-dir input_folder/ output_folder/ --target-lang es --override
+# Overwrite existing files
+python cli.py translate-dir input_folder/ output_folder/ --target-lang es --overwrite
 ```
 
 ### Step-by-Step Workflow
