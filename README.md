@@ -57,10 +57,18 @@ python cli.py reintegrate input.pptx translated.json output.pptx
 
 ## Commands
 
-- `extract <input.pptx> <output.json>` - Extract text from PPTX
-- `translate <input.json> <output.json> --target-lang <lang>` - Translate JSON
-- `reintegrate <original.pptx> <translated.json> <output.pptx>` - Create translated PPTX
-- `translate-pptx <input.pptx> <output.pptx> --target-lang <lang>` - Full pipeline
+The CLI uses Click for a modern, user-friendly interface with automatic help generation and validation.
+
+- **`extract`** - Extract text from PPTX to JSON
+- **`translate`** - Translate JSON using Gemini API  
+- **`reintegrate`** - Reintegrate translated text into PPTX
+- **`translate-pptx`** - Full translation pipeline (recommended)
+
+Get help for any command:
+```bash
+python cli.py --help
+python cli.py translate-pptx --help
+```
 
 ## Configuration
 
