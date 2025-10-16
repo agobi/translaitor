@@ -54,9 +54,9 @@ def set_shape_text(shape, text):
 
 
 def replace_text_preserve_formatting(text_frame, new_text):
-    """Replace text while preserving formatting from the first run.
+    """Replace text while preserving formatting.
     
-    Strategy: Save formatting, clear all text, put new text in first run with saved formatting.
+    Strategy: Distribute text proportionally across runs to preserve formatting.
     
     Args:
         text_frame: Text frame to modify
@@ -66,99 +66,42 @@ def replace_text_preserve_formatting(text_frame, new_text):
         text_frame.text = new_text
         return
     
-    # Get the first paragraph
-    first_paragraph = text_frame.paragraphs[0]
+    # Collect all runs that have text (don't use strip, just check if text exists)
+    runs_with_text = []
+    for para in text_frame.paragraphs:
+        for run in para.runs:
+            if run.text:  # Any text at all, including whitespace
+                runs_with_text.append(run)
     
-    if not first_paragraph.runs:
+    if not runs_with_text:
         text_frame.text = new_text
         return
     
-    # Get the first run and save its font properties
-    first_run = first_paragraph.runs[0]
+    # If only one run, just replace its text
+    if len(runs_with_text) == 1:
+        runs_with_text[0].text = new_text
+        return
     
-    # Save font properties
-    saved_font = {
-        'name': None,
-        'size': None,
-        'bold': None,
-        'italic': None,
-        'underline': None,
-        'color_rgb': None
-    }
+    # Distribute text proportionally across runs
+    original_lengths = [len(run.text) for run in runs_with_text]
+    total_original_length = sum(original_lengths)
     
-    try:
-        saved_font['name'] = first_run.font.name
-    except (AttributeError, KeyError):
-        pass
-    
-    try:
-        saved_font['size'] = first_run.font.size
-    except (AttributeError, KeyError):
-        pass
-    
-    try:
-        saved_font['bold'] = first_run.font.bold
-    except (AttributeError, KeyError):
-        pass
-    
-    try:
-        saved_font['italic'] = first_run.font.italic
-    except (AttributeError, KeyError):
-        pass
-    
-    try:
-        saved_font['underline'] = first_run.font.underline
-    except (AttributeError, KeyError):
-        pass
-    
-    try:
-        if first_run.font.color and first_run.font.color.type is not None:
-            saved_font['color_rgb'] = first_run.font.color.rgb
-    except (AttributeError, KeyError):
-        pass
-    
-    # Clear all text using the simple method
-    text_frame.text = new_text
-    
-    # Now apply the saved formatting to the first run
-    if text_frame.paragraphs and text_frame.paragraphs[0].runs:
-        new_first_run = text_frame.paragraphs[0].runs[0]
+    if total_original_length == 0:
+        runs_with_text[0].text = new_text
+    else:
+        proportions = [length / total_original_length for length in original_lengths]
+        new_text_length = len(new_text)
+        current_pos = 0
         
-        try:
-            if saved_font['name']:
-                new_first_run.font.name = saved_font['name']
-        except:
-            pass
-        
-        try:
-            if saved_font['size']:
-                new_first_run.font.size = saved_font['size']
-        except:
-            pass
-        
-        try:
-            if saved_font['bold'] is not None:
-                new_first_run.font.bold = saved_font['bold']
-        except:
-            pass
-        
-        try:
-            if saved_font['italic'] is not None:
-                new_first_run.font.italic = saved_font['italic']
-        except:
-            pass
-        
-        try:
-            if saved_font['underline'] is not None:
-                new_first_run.font.underline = saved_font['underline']
-        except:
-            pass
-        
-        try:
-            if saved_font['color_rgb']:
-                new_first_run.font.color.rgb = saved_font['color_rgb']
-        except:
-            pass
+        for i, (run, proportion) in enumerate(zip(runs_with_text, proportions)):
+            if i == len(runs_with_text) - 1:
+                run.text = new_text[current_pos:]
+            else:
+                run_length = int(new_text_length * proportion)
+                if run_length == 0 and current_pos < new_text_length:
+                    run_length = 1
+                run.text = new_text[current_pos:current_pos + run_length]
+                current_pos += run_length
 
 
 def reintegrate_text_into_shape(shape, text_iterator):
