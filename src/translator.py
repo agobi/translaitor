@@ -96,7 +96,7 @@ Return the translated JSON:"""
     try:
         translated_data = json.loads(response_text)
     except json.JSONDecodeError as e:
-        print(f"Error: Failed to parse Gemini response as JSON")
+        print("Error: Failed to parse Gemini response as JSON")
         print(f"Response: {response_text[:500]}")
         raise e
     
@@ -140,5 +140,5 @@ def translate(input_json_path, output_json_path, target_lang, source_lang=None):
     
     save_json(translated_data, output_json_path)
     
-    print(f"✓ Translation complete")
+    print("✓ Translation complete")
     print(f"✓ Saved to {output_json_path}")

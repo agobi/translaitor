@@ -53,6 +53,114 @@ def set_shape_text(shape, text):
     return count
 
 
+def replace_text_preserve_formatting(text_frame, new_text):
+    """Replace text while preserving formatting from the first run.
+    
+    Strategy: Save formatting, clear all text, put new text in first run with saved formatting.
+    
+    Args:
+        text_frame: Text frame to modify
+        new_text: New text to set
+    """
+    if not text_frame.paragraphs:
+        text_frame.text = new_text
+        return
+    
+    # Get the first paragraph
+    first_paragraph = text_frame.paragraphs[0]
+    
+    if not first_paragraph.runs:
+        text_frame.text = new_text
+        return
+    
+    # Get the first run and save its font properties
+    first_run = first_paragraph.runs[0]
+    
+    # Save font properties
+    saved_font = {
+        'name': None,
+        'size': None,
+        'bold': None,
+        'italic': None,
+        'underline': None,
+        'color_rgb': None
+    }
+    
+    try:
+        saved_font['name'] = first_run.font.name
+    except (AttributeError, KeyError):
+        pass
+    
+    try:
+        saved_font['size'] = first_run.font.size
+    except (AttributeError, KeyError):
+        pass
+    
+    try:
+        saved_font['bold'] = first_run.font.bold
+    except (AttributeError, KeyError):
+        pass
+    
+    try:
+        saved_font['italic'] = first_run.font.italic
+    except (AttributeError, KeyError):
+        pass
+    
+    try:
+        saved_font['underline'] = first_run.font.underline
+    except (AttributeError, KeyError):
+        pass
+    
+    try:
+        if first_run.font.color and first_run.font.color.type is not None:
+            saved_font['color_rgb'] = first_run.font.color.rgb
+    except (AttributeError, KeyError):
+        pass
+    
+    # Clear all text using the simple method
+    text_frame.text = new_text
+    
+    # Now apply the saved formatting to the first run
+    if text_frame.paragraphs and text_frame.paragraphs[0].runs:
+        new_first_run = text_frame.paragraphs[0].runs[0]
+        
+        try:
+            if saved_font['name']:
+                new_first_run.font.name = saved_font['name']
+        except:
+            pass
+        
+        try:
+            if saved_font['size']:
+                new_first_run.font.size = saved_font['size']
+        except:
+            pass
+        
+        try:
+            if saved_font['bold'] is not None:
+                new_first_run.font.bold = saved_font['bold']
+        except:
+            pass
+        
+        try:
+            if saved_font['italic'] is not None:
+                new_first_run.font.italic = saved_font['italic']
+        except:
+            pass
+        
+        try:
+            if saved_font['underline'] is not None:
+                new_first_run.font.underline = saved_font['underline']
+        except:
+            pass
+        
+        try:
+            if saved_font['color_rgb']:
+                new_first_run.font.color.rgb = saved_font['color_rgb']
+        except:
+            pass
+
+
 def reintegrate_text_into_shape(shape, text_iterator):
     """Reintegrate translated text into a shape.
     
@@ -70,7 +178,7 @@ def reintegrate_text_into_shape(shape, text_iterator):
         if shape.text_frame.text.strip():
             translated_text = text_iterator.get_next()
             if translated_text is not None:
-                shape.text_frame.text = translated_text
+                replace_text_preserve_formatting(shape.text_frame, translated_text)
                 count += 1
     
     # Handle tables
@@ -80,7 +188,7 @@ def reintegrate_text_into_shape(shape, text_iterator):
                 if cell.text_frame.text.strip():
                     translated_text = text_iterator.get_next()
                     if translated_text is not None:
-                        cell.text_frame.text = translated_text
+                        replace_text_preserve_formatting(cell.text_frame, translated_text)
                         count += 1
     
     # Handle grouped shapes (recursively)
