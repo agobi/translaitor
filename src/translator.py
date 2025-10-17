@@ -336,36 +336,50 @@ def translate_with_gemini(
     # Remove markdown code blocks if present
     if response_text.startswith("```"):
         lines = response_text.split("\n")
-        # Remove first line (```json or ```)
-        lines = lines[1:]
-        # Remove last line (```)
-        if lines[-1].strip() == "```":
-            lines = lines[:-1]
-        response_text = "\n".join(lines)
+        response_text = "\n".join(lines[1:-1]) if len(lines) > 2 else response_text
 
     try:
         translated_data = json.loads(response_text)
     except json.JSONDecodeError as e:
-        print("Error: Failed to parse Gemini response as JSON")
-        print(f"Response: {response_text[:500]}")
-        raise e
+        # Show more context around the error
+        error_start = max(0, e.pos - 100)
+        error_end = min(len(response_text), e.pos + 100)
+        error_context = response_text[error_start:error_end]
 
-    # Validate structure
-    if "slides" not in translated_data:
-        raise ValueError("Translated data missing 'slides' key")
+        print(f"\n✗ JSON parsing error at position {e.pos}:")
+        print(f"  {e.msg}")
+        print("\nContext around error:")
+        print(f"  ...{error_context}...")
+        print(f"\nFull response length: {len(response_text)} characters")
 
-    if len(translated_data["slides"]) != len(data["slides"]):
+        # Retry once with a stricter prompt if this is the first attempt
+        if retry_attempt == 0:
+            print("\n⚠ Retrying with stricter JSON formatting prompt...")
+            time.sleep(2)
+            return translate_with_gemini(data, target_lang, source_lang, retry_attempt + 1, style=style, topic=topic)
+
         raise ValueError(
-            f"Slide count mismatch: original has {len(data['slides'])} slides, "
-            f"translated has {len(translated_data['slides'])} slides"
+            f"Failed to parse Gemini response as JSON after {retry_attempt + 1} attempts: {e}\n"
+            f"Error at line {e.lineno}, column {e.colno}\n"
+            f"Context: ...{error_context}..."
+        ) from e
+
+    # Validate structure - support both PPTX (slides) and DOCX (paragraphs)
+    structure_key = "slides" if "slides" in data else "paragraphs"
+    item_name = "slide" if structure_key == "slides" else "paragraph"
+
+    if len(data[structure_key]) != len(translated_data[structure_key]):
+        raise ValueError(
+            f"{item_name.capitalize()} count mismatch: original has {len(data[structure_key])} {structure_key}, "
+            f"translated has {len(translated_data[structure_key])} {structure_key}"
         )
 
-    for i, (orig_slide, trans_slide) in enumerate(zip(data["slides"], translated_data["slides"])):
+    for i, (orig_slide, trans_slide) in enumerate(zip(data[structure_key], translated_data[structure_key])):
         orig_count = len(orig_slide["texts"])
         trans_count = len(trans_slide["texts"])
         if orig_count != trans_count:
             # Structure mismatch detected - show error
-            print(f"\n✗ Structure mismatch in slide {i + 1}:")
+            print(f"\n✗ Structure mismatch in {item_name} {i + 1}:")
             print(f"  Original texts ({orig_count}):")
             for idx, text in enumerate(orig_slide["texts"][:5]):  # Show first 5
                 preview = text[:50] + "..." if len(text) > 50 else text
@@ -387,10 +401,10 @@ def translate_with_gemini(
                     f"\n⚠ Retrying with stricter prompt (attempt {retry_attempt + 1}/{max_structure_retries})..."
                 )
                 time.sleep(2)  # Brief delay before retry
-                return translate_with_gemini(data, target_lang, source_lang, retry_attempt + 1)
+                return translate_with_gemini(data, target_lang, source_lang, retry_attempt + 1, style=style, topic=topic)
 
             raise ValueError(
-                f"Text count mismatch in slide {i + 1} after {max_structure_retries} attempts: "
+                f"Text count mismatch in {item_name} {i + 1} after {max_structure_retries} attempts: "
                 f"original has {orig_count} texts, translated has {trans_count} texts. "
                 f"Gemini API is merging/splitting text elements. "
                 f"Try using 'gemini-2.5-pro' model for better structure preservation."
@@ -415,11 +429,13 @@ def translate(
     print(f"Loading {input_json_path}...")
     data = load_json(input_json_path)
 
-    total_texts = sum(len(slide["texts"]) for slide in data["slides"])
+    # Support both PPTX (slides) and DOCX (paragraphs)
+    structure_key = "slides" if "slides" in data else "paragraphs"
+    total_texts = sum(len(item["texts"]) for item in data[structure_key])
     print(f"Translating {total_texts} text elements to {target_lang}...")
 
     translated_data = translate_with_gemini(
-        data, target_lang, source_lang, style=style, topic=topic
+        data, target_lang, source_lang, retry_attempt=0, style=style, topic=topic
     )
 
     save_json(translated_data, output_json_path)
