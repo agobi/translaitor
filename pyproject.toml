@@ -1,5 +1,5 @@
 [project]
-name = "slidetranslator"
+name = "translaitor"
 version = "1.0.0"
 description = "Translate PowerPoint presentations using Google Gemini"
 authors = [{name = "Attila Góbi", email = "attila.gobi@gmail.com"}]

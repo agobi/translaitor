@@ -1,6 +1,12 @@
-# PPTX Slide Translator
+<div align="center">
+  <img src="./logo.png" alt="translaitor logo" width="200"/>
+  
+  # translaitor
 
-[![Lint and Type Check](https://github.com/YOUR_USERNAME/slidetranslator/actions/workflows/lint.yml/badge.svg)](https://github.com/YOUR_USERNAME/slidetranslator/actions/workflows/lint.yml)
+  > ⚠️ **Disclaimer**: This project is 100% vibe coded. I have no idea what it does, but it seems to work. Use at your own risk! 🎲
+
+  [![Lint and Type Check](https://github.com/agobi/translaitor/actions/workflows/lint.yml/badge.svg)](https://github.com/agobi/translaitor/actions/workflows/lint.yml)
+</div>
 
 Translate PowerPoint presentations using Google Gemini API.
 

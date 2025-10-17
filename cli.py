@@ -40,7 +40,7 @@ def get_target_lang(target_lang):
 
 
 @click.group()
-@click.version_option(version="1.0.0", prog_name="PPTX Translator")
+@click.version_option(version="1.0.0", prog_name="translaitor")
 def cli():
     """Translate PowerPoint presentations using Google Gemini.
 

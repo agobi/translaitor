@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Setup script for PPTX Translator
+# Setup script for translaitor
 
-echo "Setting up PPTX Translator..."
+echo "Setting up translaitor..."
 
 # Create virtual environment
 if [ ! -d "venv" ]; then
