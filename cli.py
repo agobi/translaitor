@@ -30,14 +30,13 @@ def get_handler_for_file(file_path):
     """
     file_path = str(file_path).lower()
 
-    if file_path.endswith('.pptx'):
+    if file_path.endswith(".pptx"):
         return PPTXHandler()
-    elif file_path.endswith('.docx'):
+    elif file_path.endswith(".docx"):
         return DOCXHandler()
     else:
         raise ValueError(
-            "Unsupported file type. "
-            "Supported formats: .pptx (PowerPoint), .docx (Word)"
+            "Unsupported file type. Supported formats: .pptx (PowerPoint), .docx (Word)"
         )
 
 

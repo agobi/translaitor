@@ -14,11 +14,12 @@ CRITICAL REQUIREMENTS - FOLLOW EXACTLY:
 2. ONLY translate the text content inside the "texts" arrays
 3. Do NOT translate the JSON keys ("slides", "texts")
 4. Return ONLY valid JSON, no additional text, explanation, or markdown
-5. MUST maintain the EXACT same number of slides and text elements
-6. EVERY text element in input MUST have EXACTLY ONE corresponding text element in output
-7. Do NOT merge, split, or skip any text elements
-8. Empty strings "" should remain as empty strings ""
-9. Preserve line breaks (\\n) within text elements
+5. Properly escape special characters in strings (quotes as \", backslashes as \\\\, etc.)
+6. MUST maintain the EXACT same number of slides and text elements
+7. EVERY text element in input MUST have EXACTLY ONE corresponding text element in output
+8. Do NOT merge, split, or skip any text elements
+9. Empty strings "" should remain as empty strings ""
+10. Preserve line breaks (\\n) within text elements
 
 VALIDATION:
 - Input has {slide_count} slides
@@ -96,11 +97,21 @@ def get_translation_prompt(
         retry_warning = f"""
 
 ⚠️  CRITICAL - RETRY ATTEMPT {retry_attempt}:
-The previous translation had structure errors (text elements were merged/split).
-YOU MUST PRESERVE THE EXACT NUMBER OF TEXT ELEMENTS IN EACH SLIDE.
-DO NOT COMBINE ADJACENT TEXT ELEMENTS EVEN IF THEY SEEM RELATED.
-TRANSLATE EACH TEXT ELEMENT SEPARATELY AND INDEPENDENTLY.
-Count the input texts carefully and ensure output has the EXACT same count."""
+The previous translation had errors (structure mismatch or invalid JSON).
+
+JSON FORMATTING REQUIREMENTS:
+- Return ONLY valid, parseable JSON
+- Properly escape all special characters (quotes: \" , backslashes: \\\\, newlines: \\n)
+- No trailing commas in arrays or objects
+- No comments in the JSON
+- Use valid UTF-8 encoding
+- Test your JSON is valid before responding
+
+STRUCTURE REQUIREMENTS:
+- YOU MUST PRESERVE THE EXACT NUMBER OF TEXT ELEMENTS IN EACH SLIDE
+- DO NOT COMBINE ADJACENT TEXT ELEMENTS EVEN IF THEY SEEM RELATED
+- TRANSLATE EACH TEXT ELEMENT SEPARATELY AND INDEPENDENTLY
+- Count the input texts carefully and ensure output has the EXACT same count"""
 
     # Build complete prompt
     prompt = BASE_PROMPT.format(

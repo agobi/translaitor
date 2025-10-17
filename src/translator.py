@@ -356,7 +356,9 @@ def translate_with_gemini(
         if retry_attempt == 0:
             print("\n⚠ Retrying with stricter JSON formatting prompt...")
             time.sleep(2)
-            return translate_with_gemini(data, target_lang, source_lang, retry_attempt + 1, style=style, topic=topic)
+            return translate_with_gemini(
+                data, target_lang, source_lang, retry_attempt + 1, style=style, topic=topic
+            )
 
         raise ValueError(
             f"Failed to parse Gemini response as JSON after {retry_attempt + 1} attempts: {e}\n"
@@ -374,7 +376,9 @@ def translate_with_gemini(
             f"translated has {len(translated_data[structure_key])} {structure_key}"
         )
 
-    for i, (orig_slide, trans_slide) in enumerate(zip(data[structure_key], translated_data[structure_key])):
+    for i, (orig_slide, trans_slide) in enumerate(
+        zip(data[structure_key], translated_data[structure_key])
+    ):
         orig_count = len(orig_slide["texts"])
         trans_count = len(trans_slide["texts"])
         if orig_count != trans_count:
@@ -401,7 +405,9 @@ def translate_with_gemini(
                     f"\n⚠ Retrying with stricter prompt (attempt {retry_attempt + 1}/{max_structure_retries})..."
                 )
                 time.sleep(2)  # Brief delay before retry
-                return translate_with_gemini(data, target_lang, source_lang, retry_attempt + 1, style=style, topic=topic)
+                return translate_with_gemini(
+                    data, target_lang, source_lang, retry_attempt + 1, style=style, topic=topic
+                )
 
             raise ValueError(
                 f"Text count mismatch in {item_name} {i + 1} after {max_structure_retries} attempts: "
