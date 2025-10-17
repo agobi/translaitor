@@ -14,6 +14,31 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src import extractor, reintegrator, translator
 
 
+def get_target_lang(target_lang):
+    """Get target language from args or config."""
+    if target_lang:
+        return target_lang
+
+    # Try to read from config
+    try:
+        from src.translator import get_config
+
+        config = get_config()
+        default_lang = config.get("default", "target_lang")
+        if default_lang:
+            return default_lang
+    except Exception:
+        pass
+
+    # If no config default, raise error
+    click.secho(
+        "✗ Error: --target-lang is required (or set target_lang in [default] section of config.ini)",
+        fg="red",
+        err=True,
+    )
+    sys.exit(1)
+
+
 @click.group()
 @click.version_option(version="1.0.0", prog_name="PPTX Translator")
 def cli():
@@ -47,12 +72,25 @@ def extract(input, output):
 @cli.command()
 @click.argument("input", type=click.Path(exists=True))
 @click.argument("output", type=click.Path())
-@click.option("--target-lang", required=True, help="Target language code (e.g., es, fr, de)")
+@click.option(
+    "--target-lang",
+    default=None,
+    help="Target language code (e.g., es, fr, de, default from config)",
+)
 @click.option("--source-lang", default=None, help="Source language code (optional)")
-def translate(input, output, target_lang, source_lang):
+@click.option(
+    "--style", default=None, help="Translation style (direct, formal, casual, technical, gen-alpha)"
+)
+@click.option(
+    "--topic",
+    default=None,
+    help="Translation topic (diving, medical, technical, business, education, general)",
+)
+def translate(input, output, target_lang, source_lang, style, topic):
     """Translate JSON using Gemini API."""
     try:
-        translator.translate(input, output, target_lang, source_lang)
+        target_lang = get_target_lang(target_lang)
+        translator.translate(input, output, target_lang, source_lang, style=style, topic=topic)
     except Exception as e:
         click.secho(f"✗ Error: {e}", fg="red", err=True)
         sys.exit(1)
@@ -74,11 +112,24 @@ def reintegrate(original, translated_json, output):
 @cli.command("translate-pptx")
 @click.argument("input", type=click.Path(exists=True))
 @click.argument("output", type=click.Path())
-@click.option("--target-lang", required=True, help="Target language code (e.g., es, fr, de)")
+@click.option(
+    "--target-lang",
+    default=None,
+    help="Target language code (e.g., es, fr, de, default from config)",
+)
 @click.option("--source-lang", default=None, help="Source language code (optional)")
-def translate_pptx(input, output, target_lang, source_lang):
+@click.option(
+    "--style", default=None, help="Translation style (direct, formal, casual, technical, gen-alpha)"
+)
+@click.option(
+    "--topic",
+    default=None,
+    help="Translation topic (diving, medical, technical, business, education, general)",
+)
+def translate_pptx(input, output, target_lang, source_lang, style, topic):
     """Translate PPTX file (full pipeline)."""
     try:
+        target_lang = get_target_lang(target_lang)
         # Create temporary files
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_extract:
             extracted_path = tmp_extract.name
@@ -90,7 +141,9 @@ def translate_pptx(input, output, target_lang, source_lang):
         extractor.extract(input, extracted_path)
 
         click.echo(f"\nStep 2/3: Translating to {target_lang}...")
-        translator.translate(extracted_path, translated_path, target_lang, source_lang)
+        translator.translate(
+            extracted_path, translated_path, target_lang, source_lang, style=style, topic=topic
+        )
 
         click.echo("\nStep 3/3: Creating translated PPTX...")
         reintegrator.reintegrate(input, translated_path, output)
@@ -117,8 +170,20 @@ def translate_pptx(input, output, target_lang, source_lang):
 @cli.command("translate-dir")
 @click.argument("input_dir", type=click.Path(exists=True, file_okay=False, dir_okay=True))
 @click.argument("output_dir", type=click.Path())
-@click.option("--target-lang", required=True, help="Target language code (e.g., es, fr, de)")
+@click.option(
+    "--target-lang",
+    default=None,
+    help="Target language code (e.g., es, fr, de, default from config)",
+)
 @click.option("--source-lang", default=None, help="Source language code (optional)")
+@click.option(
+    "--style", default=None, help="Translation style (direct, formal, casual, technical, gen-alpha)"
+)
+@click.option(
+    "--topic",
+    default=None,
+    help="Translation topic (diving, medical, technical, business, education, general)",
+)
 @click.option(
     "--recursive/--no-recursive", default=False, help="Process subdirectories recursively"
 )
@@ -134,7 +199,17 @@ def translate_pptx(input, output, target_lang, source_lang):
     is_flag=True,
     help="Overwrite existing files in output directory",
 )
-def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, skip_existing, overwrite_existing):
+def translate_dir(
+    input_dir,
+    output_dir,
+    target_lang,
+    source_lang,
+    style,
+    topic,
+    recursive,
+    skip_existing,
+    overwrite_existing,
+):
     """Translate all PPTX files in a directory.
 
     This will:
@@ -143,6 +218,8 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
     - Save translated files to output directory with same filenames
     - Continue processing even if individual files fail
     """
+    target_lang = get_target_lang(target_lang)
+
     # Check for conflicting flags
     if skip_existing and overwrite_existing:
         click.secho("✗ Error: Cannot use both --skip and --overwrite together", fg="red", err=True)
@@ -155,9 +232,7 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
     output_path.mkdir(parents=True, exist_ok=True)
 
     # Find all PPTX files
-    pptx_files = (
-        list(input_path.rglob("*.pptx")) if recursive else list(input_path.glob("*.pptx"))
-    )
+    pptx_files = list(input_path.rglob("*.pptx")) if recursive else list(input_path.glob("*.pptx"))
 
     if not pptx_files:
         click.secho(f"✗ No PPTX files found in {input_dir}", fg="yellow")
@@ -173,7 +248,10 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
                 existing_files.append(str(rel_path))
 
         if existing_files:
-            click.secho(f"\n✗ Error: {len(existing_files)} file(s) already exist in output directory:", fg="red")
+            click.secho(
+                f"\n✗ Error: {len(existing_files)} file(s) already exist in output directory:",
+                fg="red",
+            )
             for file in existing_files[:10]:  # Show first 10
                 click.echo(f"  - {file}")
             if len(existing_files) > 10:
@@ -236,7 +314,9 @@ def translate_dir(input_dir, output_dir, target_lang, source_lang, recursive, sk
             extractor.extract(str(pptx_file), extracted_path)
 
             # Translate
-            translator.translate(extracted_path, translated_path, target_lang, source_lang)
+            translator.translate(
+                extracted_path, translated_path, target_lang, source_lang, style=style, topic=topic
+            )
 
             # Reintegrate
             reintegrator.reintegrate(str(pptx_file), translated_path, str(output_file))

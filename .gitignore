@@ -8,8 +8,9 @@ venv/
 env/
 ENV/
 
-# Environment variables
+# Configuration files
 .env
+config.ini
 
 # IDE
 .vscode/

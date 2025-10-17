@@ -26,18 +26,18 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     pip install -r requirements-dev.txt
 fi
 
-# Create .env file if it doesn't exist
-if [ ! -f ".env" ]; then
-    echo "Creating .env file..."
-    cp .env.example .env
+# Create config.ini file if it doesn't exist
+if [ ! -f "config.ini" ]; then
+    echo "Creating config.ini file..."
+    cp config.ini.example config.ini
     echo ""
-    echo "⚠️  Please edit .env and add your Gemini API key!"
+    echo "⚠️  Please edit config.ini and add your Gemini API key!"
     echo ""
 fi
 
 echo "✓ Setup complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Edit .env and add your GEMINI_API_KEY"
+echo "  1. Edit config.ini and add your Gemini API key under [gemini] section"
 echo "  2. Activate the virtual environment: source venv/bin/activate"
 echo "  3. Run: python cli.py --help"

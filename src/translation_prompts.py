@@ -31,63 +31,23 @@ Input JSON:
 Return the translated JSON (ONLY the JSON, nothing else):"""
 
 
-# Style-specific instructions
-STYLE_INSTRUCTIONS = {
-    "direct": """Translation Style: Use direct, clear, and concise language.
-- Avoid overly formal or flowery language
-- Use active voice where possible
-- Be straightforward and to the point
-- Maintain professional tone while being accessible""",
-    "formal": """Translation Style: Use formal, professional language.
-- Maintain formal register throughout
-- Use complete sentences and proper grammar
-- Avoid contractions and colloquialisms
-- Use industry-standard terminology""",
-    "casual": """Translation Style: Use casual, conversational language.
-- Use natural, everyday expressions
-- Keep it friendly and approachable
-- Use contractions where natural
-- Speak directly to the reader""",
-    "technical": """Translation Style: Use precise technical language.
-- Maintain technical accuracy
-- Use exact technical terms
-- Preserve all technical specifications
-- Keep professional and precise""",
-}
+# Default fallback instructions (used only if config.ini is missing)
+DEFAULT_STYLE_INSTRUCTION = """Translation Style: Use clear, natural language.
+- Maintain the original tone and meaning
+- Use appropriate grammar and vocabulary
+- Keep the translation fluent and readable"""
 
-
-# Topic-specific instructions
-TOPIC_INSTRUCTIONS = {
-    "diving": """Topic Context: This content is about SCUBA diving and deep diving.
-- Use correct diving terminology (e.g., "depth", "decompression", "nitrogen narcosis")
-- Maintain safety-critical information accurately
-- Use terminology recognized by diving certification organizations (PADI, SSI, SDI, etc.)
-- Preserve numerical values for depths, times, and safety limits exactly""",
-    "medical": """Topic Context: This content is medical/healthcare related.
-- Use accurate medical terminology
-- Preserve all dosages, measurements, and medical specifications exactly
-- Maintain formal medical register
-- Use terminology consistent with medical standards""",
-    "technical": """Topic Context: This content is technical documentation.
-- Preserve all technical terms and specifications
-- Maintain accuracy for measurements, codes, and technical details
-- Use industry-standard terminology
-- Keep technical precision""",
-    "business": """Topic Context: This content is business-related.
-- Use appropriate business terminology
-- Maintain professional tone
-- Use terminology common in business contexts
-- Preserve numbers, dates, and business-specific terms accurately""",
-    "education": """Topic Context: This content is educational material.
-- Use clear, pedagogical language
-- Maintain instructional tone
-- Use terminology appropriate for learners
-- Keep explanations accessible""",
-}
+DEFAULT_TOPIC_INSTRUCTION = ""  # No specific topic guidance by default
 
 
 def get_translation_prompt(
-    json_data, target_lang, source_lang=None, style="direct", topic="general", retry_attempt=0
+    json_data,
+    target_lang,
+    source_lang=None,
+    style="direct",
+    topic="general",
+    retry_attempt=0,
+    config=None,
 ):
     """Generate a translation prompt based on configuration.
 
@@ -98,6 +58,7 @@ def get_translation_prompt(
         style: Translation style (direct, formal, casual, technical)
         topic: Topic context (diving, medical, technical, business, education, general)
         retry_attempt: Retry attempt number (adds stronger warnings if >0)
+        config: Optional Config object to read instructions from INI file
 
     Returns:
         str: Complete prompt for translation
@@ -115,11 +76,19 @@ def get_translation_prompt(
     # Format source language text
     source_lang_text = f" from {source_lang}" if source_lang else ""
 
-    # Get style instructions
-    style_instructions = STYLE_INSTRUCTIONS.get(style, STYLE_INSTRUCTIONS["direct"])
+    # Get style instructions - try config first, fallback to default
+    style_instructions = None
+    if config:
+        style_instructions = config.get_style_instructions(style)
+    if not style_instructions:
+        style_instructions = DEFAULT_STYLE_INSTRUCTION
 
-    # Get topic instructions
-    topic_instructions = TOPIC_INSTRUCTIONS.get(topic, "")
+    # Get topic instructions - try config first, fallback to default
+    topic_instructions = None
+    if config:
+        topic_instructions = config.get_topic_instructions(topic)
+    if not topic_instructions:
+        topic_instructions = DEFAULT_TOPIC_INSTRUCTION
 
     # Add extra emphasis on retries
     retry_warning = ""

@@ -6,12 +6,12 @@
 # Run the setup script
 ./setup.sh
 
-# Edit .env and configure:
+# Edit config.ini and configure:
 # - Add your Gemini API key (required)
-# - GEMINI_MODEL=gemini-2.5-flash (default, best price-performance)
-# - Set TRANSLATION_STYLE=direct (for clear language)
-# - Set TRANSLATION_TOPIC=diving (for diving content)
-nano .env  # or use your preferred editor
+# - model=gemini-2.5-flash (default, best price-performance)
+# - Set style=direct (for clear language)
+# - Set topic=diving (for diving content)
+nano config.ini  # or use your preferred editor
 
 # Activate virtual environment
 source venv/bin/activate
@@ -105,7 +105,7 @@ slidetranslator/
 │   ├── reintegrator.py # Reintegrate text → PPTX
 │   └── utils.py        # Helper functions
 ├── requirements.txt    # Python dependencies
-├── .env               # Your API keys (not in git)
+├── config.ini         # Your configuration (not in git)
 └── README.md          # Full documentation
 ```
 
@@ -126,9 +126,9 @@ No action needed - just wait for the retry to complete!
 
 ## Troubleshooting
 
-### "GEMINI_API_KEY not found"
-- Make sure you copied `.env.example` to `.env`
-- Add your actual API key to the `.env` file
+### "GEMINI API key not found"
+- Make sure you copied `config.ini.example` to `config.ini`
+- Add your actual API key to the `config.ini` file under `[gemini]` section
 - Verify the key has no extra spaces or quotes
 
 ### Virtual environment not activated
@@ -146,6 +146,6 @@ This can happen if the PPTX has complex shapes. The tool will still work, but yo
 
 ### Frequent rate limiting
 If you see many retry messages:
-- Increase `MAX_RETRIES` in `.env` (e.g., `MAX_RETRIES=10`)
+- Increase `max_retries` in `config.ini` under `[retry]` section (e.g., `max_retries = 10`)
 - Slow down batch processing
 - Consider using Gemini Pro with higher rate limits

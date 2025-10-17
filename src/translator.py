@@ -1,14 +1,171 @@
 """Translate extracted text using Google Gemini API."""
 
+import configparser
+import contextlib
 import json
-import os
 import time
+from pathlib import Path
 
 import google.generativeai as genai
-from dotenv import load_dotenv
 from google.api_core import exceptions as google_exceptions
 
 from .translation_prompts import get_translation_prompt
+
+
+class Config:
+    """Configuration manager for reading .ini files."""
+
+    def __init__(self, config_path=None):
+        """Initialize configuration.
+
+        Args:
+            config_path: Path to config.ini file. If None, searches for config.ini
+                        in current directory and parent directories.
+        """
+        self.config = configparser.ConfigParser()
+
+        config_path = self._find_config_file() if config_path is None else Path(config_path)
+
+        if config_path and config_path.exists():
+            self.config.read(config_path)
+
+    def _find_config_file(self):
+        """Search for config.ini in current and parent directories.
+
+        Returns:
+            Path to config.ini or None if not found
+        """
+        current = Path.cwd()
+        for parent in [current] + list(current.parents):
+            config_path = parent / "config.ini"
+            if config_path.exists():
+                return config_path
+        return None
+
+    def get(self, section, key, default=None, value_type=str):
+        """Get configuration value.
+
+        Args:
+            section: Section name in .ini file
+            key: Key name in section
+            default: Default value if not found
+            value_type: Type to convert value to (str, int, bool)
+
+        Returns:
+            Configuration value or default
+        """
+        try:
+            if value_type is bool:
+                return self.config.getboolean(section, key)
+            elif value_type is int:
+                return self.config.getint(section, key)
+            else:
+                return self.config.get(section, key)
+        except (configparser.NoSectionError, configparser.NoOptionError, ValueError):
+            return default
+
+    def get_gemini_api_key(self):
+        """Get Gemini API key.
+
+        Returns:
+            str: API key
+
+        Raises:
+            ValueError: If API key is not configured
+        """
+        api_key = self.get("gemini", "api_key")
+        if not api_key or api_key == "your_api_key_here":
+            raise ValueError(
+                "GEMINI API key not found or not set. "
+                "Please copy config.ini.example to config.ini and add your API key."
+            )
+        return api_key
+
+    def get_gemini_model(self):
+        """Get Gemini model name."""
+        return self.get("gemini", "model", default="gemini-2.5-flash")
+
+    def get_translation_style(self):
+        """Get translation style."""
+        return self.get("default", "style", default="direct")
+
+    def get_translation_topic(self):
+        """Get translation topic."""
+        return self.get("default", "topic", default="general")
+
+    def get_max_retries(self):
+        """Get maximum retry attempts."""
+        return self.get("retry", "max_retries", default=5, value_type=int)
+
+    def get_initial_delay(self):
+        """Get initial retry delay in seconds."""
+        return self.get("retry", "initial_delay", default=1, value_type=int)
+
+    def get_style_instructions(self, style):
+        """Get style-specific instructions from config.
+
+        Args:
+            style: Style name (e.g., 'direct', 'formal')
+
+        Returns:
+            str: Style instructions or None if not found in config
+        """
+        section = f"style:{style}"
+        return self.get(section, "instructions")
+
+    def get_topic_instructions(self, topic):
+        """Get topic-specific instructions from config.
+
+        Args:
+            topic: Topic name (e.g., 'diving', 'medical')
+
+        Returns:
+            str: Topic instructions or None if not found in config
+        """
+        section = f"topic:{topic}"
+        return self.get(section, "instructions")
+
+    def list_styles(self):
+        """List all available styles defined in config.
+
+        Returns:
+            list: List of style names
+        """
+        styles = []
+        for section in self.config.sections():
+            if section.startswith("style:"):
+                style_name = section.split(":", 1)[1]
+                styles.append(style_name)
+        return styles
+
+    def list_topics(self):
+        """List all available topics defined in config.
+
+        Returns:
+            list: List of topic names
+        """
+        topics = []
+        for section in self.config.sections():
+            if section.startswith("topic:"):
+                topic_name = section.split(":", 1)[1]
+                topics.append(topic_name)
+        return topics
+
+
+# Global config instance
+_config = None
+
+
+def get_config():
+    """Get global config instance.
+
+    Returns:
+        Config: Global configuration instance
+    """
+    global _config
+    if _config is None:
+        _config = Config()
+    return _config
 
 
 def load_json(json_path):
@@ -36,19 +193,12 @@ def save_json(data, json_path):
 
 
 def configure_gemini():
-    """Configure Gemini API with API key from environment."""
-    load_dotenv()
-
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key or api_key == "your_api_key_here":
-        raise ValueError(
-            "GEMINI_API_KEY not found or not set. "
-            "Please copy .env.example to .env and add your API key."
-        )
-
+    """Configure Gemini API with API key from config.ini."""
+    config = get_config()
+    api_key = config.get_gemini_api_key()
     genai.configure(api_key=api_key)
 
-    model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+    model_name = config.get_gemini_model()
     return genai.GenerativeModel(model_name)
 
 
@@ -77,20 +227,12 @@ def call_gemini_with_retry(model, prompt, max_retries=5, initial_delay=1):
         except google_exceptions.ResourceExhausted as e:
             # Rate limiting (429) - check for Retry-After header
             if attempt < max_retries - 1:
-                # Try to get retry-after from exception metadata
-                retry_after = None
+                wait_time = initial_delay * (2**attempt)
                 if hasattr(e, "response") and e.response:
-                    # Check for Retry-After header in response
                     retry_after = e.response.headers.get("Retry-After")
                     if retry_after:
-                        try:
+                        with contextlib.suppress(ValueError, TypeError):
                             wait_time = int(retry_after)
-                        except (ValueError, TypeError):
-                            wait_time = None
-
-                # Fallback to exponential backoff if no retry-after
-                if not retry_after or wait_time is None:
-                    wait_time = initial_delay * (2**attempt)
 
                 print(
                     f"⚠ Rate limited by Gemini API. "
@@ -104,17 +246,15 @@ def call_gemini_with_retry(model, prompt, max_retries=5, initial_delay=1):
         except (google_exceptions.ServiceUnavailable, google_exceptions.InternalServerError) as e:
             # Transient server errors - check for Retry-After header
             if attempt < max_retries - 1:
-                retry_after = None
+                # Default to exponential backoff
+                wait_time = initial_delay * (2**attempt)
+
+                # Try to get retry-after from response headers
                 if hasattr(e, "response") and e.response:
                     retry_after = e.response.headers.get("Retry-After")
                     if retry_after:
-                        try:
+                        with contextlib.suppress(ValueError, TypeError):
                             wait_time = int(retry_after)
-                        except (ValueError, TypeError):
-                            wait_time = None
-
-                if not retry_after or wait_time is None:
-                    wait_time = initial_delay * (2**attempt)
 
                 print(
                     f"⚠ Gemini API service error. "
@@ -146,7 +286,9 @@ def call_gemini_with_retry(model, prompt, max_retries=5, initial_delay=1):
     raise Exception(f"Failed after {max_retries} retry attempts")
 
 
-def translate_with_gemini(data, target_lang, source_lang=None, retry_attempt=0):
+def translate_with_gemini(
+    data, target_lang, source_lang=None, retry_attempt=0, style=None, topic=None
+):
     """Translate JSON data using Gemini API with configurable prompts.
 
     Args:
@@ -154,16 +296,20 @@ def translate_with_gemini(data, target_lang, source_lang=None, retry_attempt=0):
         target_lang: Target language code (e.g., 'es', 'fr', 'de')
         source_lang: Optional source language code
         retry_attempt: Current retry attempt for structure mismatch (internal use)
+        style: Optional translation style override
+        topic: Optional translation topic override
 
     Returns:
         dict: Translated data in same JSON structure
     """
-    load_dotenv()  # Reload to get translation config
+    config = get_config()
     model = configure_gemini()
 
-    # Get translation style and topic from environment
-    style = os.getenv("TRANSLATION_STYLE", "direct")
-    topic = os.getenv("TRANSLATION_TOPIC", "general")
+    # Get translation style and topic - CLI args override config
+    if style is None:
+        style = config.get_translation_style()
+    if topic is None:
+        topic = config.get_translation_topic()
 
     # Generate prompt using configurable template
     json_data = json.dumps(data, ensure_ascii=False, indent=2)
@@ -174,11 +320,12 @@ def translate_with_gemini(data, target_lang, source_lang=None, retry_attempt=0):
         style=style,
         topic=topic,
         retry_attempt=retry_attempt,
+        config=config,
     )
 
-    # Get retry settings from environment
-    max_retries = int(os.getenv("MAX_RETRIES", "5"))
-    initial_delay = int(os.getenv("INITIAL_RETRY_DELAY", "1"))
+    # Get retry settings from config
+    max_retries = config.get_max_retries()
+    initial_delay = config.get_initial_delay()
 
     # Call Gemini API with retry logic
     response = call_gemini_with_retry(model, prompt, max_retries, initial_delay)
@@ -218,7 +365,7 @@ def translate_with_gemini(data, target_lang, source_lang=None, retry_attempt=0):
         trans_count = len(trans_slide["texts"])
         if orig_count != trans_count:
             # Structure mismatch detected - show error
-            print(f"\n✗ Structure mismatch in slide {i+1}:")
+            print(f"\n✗ Structure mismatch in slide {i + 1}:")
             print(f"  Original texts ({orig_count}):")
             for idx, text in enumerate(orig_slide["texts"][:5]):  # Show first 5
                 preview = text[:50] + "..." if len(text) > 50 else text
@@ -236,12 +383,14 @@ def translate_with_gemini(data, target_lang, source_lang=None, retry_attempt=0):
             # Retry with more aggressive prompt if this is first attempt
             max_structure_retries = 2
             if retry_attempt < max_structure_retries:
-                print(f"\n⚠ Retrying with stricter prompt (attempt {retry_attempt + 1}/{max_structure_retries})...")
+                print(
+                    f"\n⚠ Retrying with stricter prompt (attempt {retry_attempt + 1}/{max_structure_retries})..."
+                )
                 time.sleep(2)  # Brief delay before retry
                 return translate_with_gemini(data, target_lang, source_lang, retry_attempt + 1)
 
             raise ValueError(
-                f"Text count mismatch in slide {i+1} after {max_structure_retries} attempts: "
+                f"Text count mismatch in slide {i + 1} after {max_structure_retries} attempts: "
                 f"original has {orig_count} texts, translated has {trans_count} texts. "
                 f"Gemini API is merging/splitting text elements. "
                 f"Try using 'gemini-2.5-pro' model for better structure preservation."
@@ -250,7 +399,9 @@ def translate_with_gemini(data, target_lang, source_lang=None, retry_attempt=0):
     return translated_data
 
 
-def translate(input_json_path, output_json_path, target_lang, source_lang=None):
+def translate(
+    input_json_path, output_json_path, target_lang, source_lang=None, style=None, topic=None
+):
     """Main translation function.
 
     Args:
@@ -258,6 +409,8 @@ def translate(input_json_path, output_json_path, target_lang, source_lang=None):
         output_json_path: Path to output JSON file
         target_lang: Target language code
         source_lang: Optional source language code
+        style: Optional translation style override
+        topic: Optional translation topic override
     """
     print(f"Loading {input_json_path}...")
     data = load_json(input_json_path)
@@ -265,7 +418,9 @@ def translate(input_json_path, output_json_path, target_lang, source_lang=None):
     total_texts = sum(len(slide["texts"]) for slide in data["slides"])
     print(f"Translating {total_texts} text elements to {target_lang}...")
 
-    translated_data = translate_with_gemini(data, target_lang, source_lang)
+    translated_data = translate_with_gemini(
+        data, target_lang, source_lang, style=style, topic=topic
+    )
 
     save_json(translated_data, output_json_path)
 

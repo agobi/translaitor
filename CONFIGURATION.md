@@ -6,21 +6,24 @@ The PPTX translator supports customizable translation prompts to adapt the trans
 
 ## Configuration File
 
-Edit `.env` to configure translation behavior:
+Edit `config.ini` to configure translation behavior:
 
 ### Example Configuration for Diving Content
 
-```bash
-GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-2.5-flash
-TRANSLATION_STYLE=direct
-TRANSLATION_TOPIC=diving
+```ini
+[gemini]
+api_key = your_key_here
+model = gemini-2.5-flash
+
+[translation]
+style = direct
+topic = diving
 ```
 
 ## Translation Styles
 
 ### Direct (Recommended for Diving)
-**Setting:** `TRANSLATION_STYLE=direct`
+**Setting:** `style = direct` in `[translation]` section
 
 Characteristics:
 - Clear and concise language
@@ -31,7 +34,7 @@ Characteristics:
 Best for: Training materials, instructions, safety information
 
 ### Formal
-**Setting:** `TRANSLATION_STYLE=formal`
+**Setting:** `style = formal` in `[translation]` section
 
 Characteristics:
 - Formal professional language
@@ -42,7 +45,7 @@ Characteristics:
 Best for: Official documentation, certifications, legal content
 
 ### Casual
-**Setting:** `TRANSLATION_STYLE=casual`
+**Setting:** `style = casual` in `[translation]` section
 
 Characteristics:
 - Conversational language
@@ -53,7 +56,7 @@ Characteristics:
 Best for: Marketing materials, blog posts, casual presentations
 
 ### Technical
-**Setting:** `TRANSLATION_STYLE=technical`
+**Setting:** `style = technical` in `[translation]` section
 
 Characteristics:
 - Precise technical language
@@ -66,7 +69,7 @@ Best for: Technical manuals, specifications, engineering content
 ## Translation Topics
 
 ### Diving (Default for this project)
-**Setting:** `TRANSLATION_TOPIC=diving`
+**Setting:** `topic = diving` in `[translation]` section
 
 Features:
 - Correct diving terminology (depth, decompression, nitrogen narcosis, etc.)
@@ -80,7 +83,7 @@ Example terms maintained:
 - "30 meters" → preserved exactly, not approximated
 
 ### Medical
-**Setting:** `TRANSLATION_TOPIC=medical`
+**Setting:** `topic = medical` in `[translation]` section
 
 Features:
 - Accurate medical terminology
@@ -89,7 +92,7 @@ Features:
 - Standards-compliant terminology
 
 ### Technical
-**Setting:** `TRANSLATION_TOPIC=technical`
+**Setting:** `topic = technical` in `[translation]` section
 
 Features:
 - Preserved technical specifications
