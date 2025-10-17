@@ -1,0 +1,98 @@
+[gemini]
+api_key = your_api_key_here
+model = gemini-2.5-flash
+
+[translation]
+style = direct
+topic = diving
+
+[retry]
+max_retries = 5
+initial_delay = 1
+
+# ==============================================================================
+# Translation Styles - Define style-specific instructions
+# ==============================================================================
+
+[style:direct]
+instructions = Translation Style: Use direct, clear, and concise language.
+    - Avoid overly formal or flowery language
+    - Use active voice where possible
+    - Be straightforward and to the point
+    - Maintain professional tone while being accessible
+
+[style:formal]
+instructions = Translation Style: Use formal, professional language.
+    - Maintain formal register throughout
+    - Use complete sentences and proper grammar
+    - Avoid contractions and colloquialisms
+    - Use industry-standard terminology
+
+[style:casual]
+instructions = Translation Style: Use casual, conversational language.
+    - Use natural, everyday expressions
+    - Keep it friendly and approachable
+    - Use contractions where natural
+    - Speak directly to the reader
+
+[style:technical]
+instructions = Translation Style: Use precise technical language.
+    - Maintain technical accuracy
+    - Use exact technical terms
+    - Preserve all technical specifications
+    - Keep professional and precise
+
+[style:gen-alpha]
+instructions = Translation Style: Use modern Gen-Alpha slang and informal language.
+    - Write like a 12-year-old in 2025 would text or chat
+    - Use lowercase letters predominantly, avoid formal capitalization
+    - Include modern slang terms
+    - Add relevant emojis throughout the text
+    - Keep it casual, relatable, and trendy
+    - Use internet speak and abbreviations naturally
+    - Make it feel authentic to Gen-Alpha communication style
+
+# ==============================================================================
+# Translation Topics - Define topic-specific instructions
+# ==============================================================================
+
+[topic:diving]
+instructions = Topic Context: This content is about SCUBA diving and deep diving.
+    - Use correct diving terminology (e.g., "depth", "decompression", "nitrogen narcosis")
+    - Maintain safety-critical information accurately
+    - Use terminology recognized by diving certification organizations (PADI, SSI, SDI, etc.)
+    - Preserve numerical values for depths, times, and safety limits exactly
+
+[topic:medical]
+instructions = Topic Context: This content is medical/healthcare related.
+    - Use accurate medical terminology
+    - Preserve all dosages, measurements, and medical specifications exactly
+    - Maintain formal medical register
+    - Use terminology consistent with medical standards
+
+[topic:technical]
+instructions = Topic Context: This content is technical documentation.
+    - Preserve all technical terms and specifications
+    - Maintain accuracy for measurements, codes, and technical details
+    - Use industry-standard terminology
+    - Keep technical precision
+
+[topic:business]
+instructions = Topic Context: This content is business-related.
+    - Use appropriate business terminology
+    - Maintain professional tone
+    - Use terminology common in business contexts
+    - Preserve numbers, dates, and business-specific terms accurately
+
+[topic:education]
+instructions = Topic Context: This content is educational material.
+    - Use clear, pedagogical language
+    - Maintain instructional tone
+    - Use terminology appropriate for learners
+    - Keep explanations accessible
+
+[topic:general]
+instructions = Topic Context: General content without specific domain focus.
+    - Use standard translation practices
+    - Maintain natural language flow
+    - Preserve meaning and context
