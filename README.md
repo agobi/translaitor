@@ -8,14 +8,16 @@
   [![Lint and Type Check](https://github.com/agobi/translaitor/actions/workflows/lint.yml/badge.svg)](https://github.com/agobi/translaitor/actions/workflows/lint.yml)
 </div>
 
-Translate PowerPoint presentations and Word documents using Google Gemini API.
+Translate PowerPoint presentations, Word documents, and PDF files using Google Gemini API.
 
 ## Features
 
-- **Multi-format support:** PPTX (PowerPoint) and DOCX (Word) files
+- **Multi-format support:** PPTX (PowerPoint), DOCX (Word), and PDF files
 - Extract text from files to structured JSON (preserves formatting per run)
 - Translate text using Google Gemini with intelligent retry logic
-- Reintegrate translated text back into original format (preserves fonts, colors, sizes)
+- Reintegrate translated text back into original format
+  - **PPTX/DOCX:** Preserves fonts, colors, sizes, formatting
+  - **PDF:** Replaces text in-place while maintaining layout
 - CLI-based workflow with batch directory processing
 - Configurable translation styles and domain-specific terminology
 - Smart retry logic that respects API `Retry-After` headers with exponential backoff fallback
@@ -57,8 +59,17 @@ python cli.py translate-pptx input.pptx output.pptx --target-lang es
 **Word (DOCX):**
 ```bash
 # Translate a single DOCX file
-python cli.py translate-docx input.docx output.docx --target-lang es
+python cli.py translate input.docx output.docx --target-lang es
+```
 
+**PDF:**
+```bash
+# Translate a single PDF file (preserves layout, replaces text in-place)
+python cli.py translate input.pdf output.pdf --target-lang es
+```
+
+**Batch Directory:**
+```bash
 # Entire directory
 python cli.py translate-dir input_folder/ output_folder/ --target-lang es
 

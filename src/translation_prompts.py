@@ -10,7 +10,7 @@ BASE_PROMPT = """Translate the following JSON structure{source_lang_text} to {ta
 {topic_instructions}
 
 CRITICAL REQUIREMENTS - FOLLOW EXACTLY:
-1. Preserve the EXACT JSON structure with "slides" array and "texts" arrays
+1. Preserve the EXACT JSON structure with "slides"/"pages"/"paragraphs" array and "texts" arrays
 2. ONLY translate the text content inside the "texts" arrays
 3. Do NOT translate the JSON keys ("slides", "texts")
 4. Return ONLY valid JSON, no additional text, explanation, or markdown
@@ -66,11 +66,19 @@ def get_translation_prompt(
     """
     import json as json_module
 
-    # Parse JSON to count slides for validation
+    # Parse JSON to count slides/pages/paragraphs for validation
     slide_count: Union[int, str]
     try:
         data = json_module.loads(json_data)
-        slide_count = len(data.get("slides", []))
+        # Support different document types
+        if "slides" in data:
+            slide_count = len(data["slides"])
+        elif "pages" in data:
+            slide_count = len(data["pages"])
+        elif "paragraphs" in data:
+            slide_count = len(data["paragraphs"])
+        else:
+            slide_count = "unknown"
     except (json_module.JSONDecodeError, KeyError, TypeError):
         slide_count = "unknown"
 

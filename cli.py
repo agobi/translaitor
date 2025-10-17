@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from src import translator
 from src.docx_handler import DOCXHandler
+from src.pdf_handler import PDFHandler
 from src.pptx_handler import PPTXHandler
 
 
@@ -23,7 +24,7 @@ def get_handler_for_file(file_path):
         file_path: Path to the file
 
     Returns:
-        Handler instance (PPTXHandler or DOCXHandler)
+        Handler instance (PPTXHandler, DOCXHandler, or PDFHandler)
 
     Raises:
         ValueError: If file type is not supported
@@ -34,9 +35,11 @@ def get_handler_for_file(file_path):
         return PPTXHandler()
     elif file_path.endswith(".docx"):
         return DOCXHandler()
+    elif file_path.endswith(".pdf"):
+        return PDFHandler()
     else:
         raise ValueError(
-            "Unsupported file type. Supported formats: .pptx (PowerPoint), .docx (Word)"
+            "Unsupported file type. Supported formats: .pptx (PowerPoint), .docx (Word), .pdf (PDF)"
         )
 
 
@@ -87,7 +90,7 @@ def cli():
 @click.argument("input", type=click.Path(exists=True))
 @click.argument("output", type=click.Path())
 def extract(input, output):
-    """Extract text from document (PPTX/DOCX) to JSON."""
+    """Extract text from document (PPTX/DOCX/PDF) to JSON."""
     try:
         handler = get_handler_for_file(input)
         handler.extract(input, output)
@@ -128,7 +131,7 @@ def translate_json(input, output, target_lang, source_lang, style, topic):
 @click.argument("translated_json", type=click.Path(exists=True))
 @click.argument("output", type=click.Path())
 def reintegrate(original, translated_json, output):
-    """Reintegrate translated JSON back into document (PPTX/DOCX)."""
+    """Reintegrate translated JSON back into document (PPTX/DOCX/PDF)."""
     try:
         handler = get_handler_for_file(original)
         handler.reintegrate(original, translated_json, output)
@@ -155,7 +158,7 @@ def reintegrate(original, translated_json, output):
     help="Translation topic (diving, medical, technical, business, education, general)",
 )
 def translate(input, output, target_lang, source_lang, style, topic):
-    """Translate document (PPTX/DOCX) - full pipeline."""
+    """Translate document (PPTX/DOCX/PDF) - full pipeline."""
     try:
         target_lang = get_target_lang(target_lang)
         handler = get_handler_for_file(input)
@@ -240,10 +243,10 @@ def translate_dir(
     skip_existing,
     overwrite_existing,
 ):
-    """Translate all documents (PPTX/DOCX) in a directory.
+    """Translate all documents (PPTX/DOCX/PDF) in a directory.
 
     This will:
-    - Find all .pptx files in the input directory
+    - Find all .pptx, .docx, and .pdf files in the input directory
     - Translate each one to the target language
     - Save translated files to output directory with same filenames
     - Continue processing even if individual files fail
@@ -261,14 +264,22 @@ def translate_dir(
     # Create output directory if it doesn't exist
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Find all supported document files (PPTX and DOCX)
+    # Find all supported document files (PPTX, DOCX, and PDF)
     if recursive:
-        doc_files = list(input_path.rglob("*.pptx")) + list(input_path.rglob("*.docx"))
+        doc_files = (
+            list(input_path.rglob("*.pptx"))
+            + list(input_path.rglob("*.docx"))
+            + list(input_path.rglob("*.pdf"))
+        )
     else:
-        doc_files = list(input_path.glob("*.pptx")) + list(input_path.glob("*.docx"))
+        doc_files = (
+            list(input_path.glob("*.pptx"))
+            + list(input_path.glob("*.docx"))
+            + list(input_path.glob("*.pdf"))
+        )
 
     if not doc_files:
-        click.secho(f"✗ No document files (PPTX/DOCX) found in {input_dir}", fg="yellow")
+        click.secho(f"✗ No document files (PPTX/DOCX/PDF) found in {input_dir}", fg="yellow")
         return
 
     # Check for existing files if not overwriting or skipping

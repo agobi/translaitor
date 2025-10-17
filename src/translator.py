@@ -366,9 +366,19 @@ def translate_with_gemini(
             f"Context: ...{error_context}..."
         ) from e
 
-    # Validate structure - support both PPTX (slides) and DOCX (paragraphs)
-    structure_key = "slides" if "slides" in data else "paragraphs"
-    item_name = "slide" if structure_key == "slides" else "paragraph"
+    # Validate structure - support PPTX (slides), DOCX (paragraphs), and PDF (pages)
+    if "slides" in data:
+        structure_key = "slides"
+        item_name = "slide"
+    elif "paragraphs" in data:
+        structure_key = "paragraphs"
+        item_name = "paragraph"
+    elif "pages" in data:
+        structure_key = "pages"
+        item_name = "page"
+    else:
+        structure_key = "slides"  # fallback
+        item_name = "item"
 
     if len(data[structure_key]) != len(translated_data[structure_key]):
         raise ValueError(
@@ -435,8 +445,16 @@ def translate(
     print(f"Loading {input_json_path}...")
     data = load_json(input_json_path)
 
-    # Support both PPTX (slides) and DOCX (paragraphs)
-    structure_key = "slides" if "slides" in data else "paragraphs"
+    # Support PPTX (slides), DOCX (paragraphs), and PDF (pages)
+    if "slides" in data:
+        structure_key = "slides"
+    elif "paragraphs" in data:
+        structure_key = "paragraphs"
+    elif "pages" in data:
+        structure_key = "pages"
+    else:
+        structure_key = "slides"  # fallback
+    
     total_texts = sum(len(item["texts"]) for item in data[structure_key])
     print(f"Translating {total_texts} text elements to {target_lang}...")
 
